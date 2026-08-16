@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+agenda.db
+agenda.db-shm
+agenda.db-wal
+.env

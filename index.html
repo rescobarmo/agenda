@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clínica Vital - Agenda de citas</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230891B2'%3E%3Cpath d='M12 21s-6.7-4.35-9.33-8.11C.9 10.36 1.36 7 4.05 5.7A5.2 5.2 0 0 1 10.2 6.5l1.8 2.6 1.8-2.6a5.2 5.2 0 0 1 6.15-.8c2.69 1.3 3.15 4.66 1.38 7.19C18.7 16.65 12 21 12 21z'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['Figtree', 'Noto Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+      },
+    },
+  },
+};
+</script>
+<style>
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .toast-enter { animation: toastIn .22s ease-out; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(-8px) scale(.97); } to { opacity: 1; transform: none; } }
+  .modal-enter { animation: modalIn .2s ease-out; }
+  @keyframes modalIn { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+  .fade-in { animation: fadeIn .25s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body class="min-h-screen bg-teal-50 text-teal-900 font-sans antialiased">
+
+  <div id="loginScreen" class="fixed inset-0 z-[80] flex items-center justify-center overflow-auto bg-teal-50 p-4">
+    <div class="w-full max-w-sm py-8">
+      <div class="mb-6 text-center">
+        <div class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-cyan-600 text-white shadow-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 21s-6.7-4.35-9.33-8.11C.9 10.36 1.36 7 4.05 5.7A5.2 5.2 0 0 1 10.2 6.5l1.8 2.6 1.8-2.6a5.2 5.2 0 0 1 6.15-.8c2.69 1.3 3.15 4.66 1.38 7.19C18.7 16.65 12 21 12 21z"/>
+          </svg>
+        </div>
+        <h1 class="mt-4 text-2xl font-bold text-teal-900">Clínica Vital</h1>
+        <p class="text-sm text-teal-800/60">Agenda de citas · Acceso restringido</p>
+      </div>
+
+      <form id="formLogin" class="rounded-2xl border border-teal-100 bg-white p-6 shadow-sm" novalidate>
+        <label for="loginUsuario" class="mb-1.5 block text-sm font-medium text-teal-900">Usuario</label>
+        <input id="loginUsuario" type="text" autocomplete="username" placeholder="Ej. recepcion"
+               class="w-full rounded-xl border border-teal-200 bg-white px-4 py-3 text-[15px] transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+
+        <label for="loginPassword" class="mb-1.5 mt-4 block text-sm font-medium text-teal-900">Contraseña</label>
+        <div class="relative">
+          <input id="loginPassword" type="password" autocomplete="current-password" placeholder="••••••••"
+                 class="w-full rounded-xl border border-teal-200 bg-white px-4 py-3 pr-12 text-[15px] transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+          <button id="btnTogglePass" type="button" aria-label="Mostrar contraseña"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-teal-800/40 transition hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+            </svg>
+          </button>
+        </div>
+
+        <p id="loginError" class="mt-3 hidden rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600" role="alert"></p>
+
+        <button id="btnLogin" type="submit"
+                class="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 focus-visible:ring-offset-2">
+          <span>Ingresar</span>
+        </button>
+      </form>
+
+      <details class="mt-4 rounded-xl border border-teal-100 bg-white/60 p-4 text-xs text-teal-800/60">
+        <summary class="cursor-pointer font-semibold text-teal-800">Usuarios de prueba</summary>
+        <ul class="mt-2 space-y-1 font-mono">
+          <li>admin / admin123 <span class="text-teal-800/50">· Administrador</span></li>
+          <li>recepcion / recepcion123 <span class="text-teal-800/50">· Recepcionista</span></li>
+          <li>medico1 … medico5 / medico123 <span class="text-teal-800/50">· Médicos</span></li>
+        </ul>
+      </details>
+    </div>
+  </div>
+
+  <div id="appShell" class="mx-auto hidden max-w-3xl px-4 pb-20 sm:px-6">
+
+    <header class="flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex items-center gap-3">
+        <div class="grid h-11 w-11 place-items-center rounded-2xl bg-cyan-600 text-white shadow-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 21s-6.7-4.35-9.33-8.11C.9 10.36 1.36 7 4.05 5.7A5.2 5.2 0 0 1 10.2 6.5l1.8 2.6 1.8-2.6a5.2 5.2 0 0 1 6.15-.8c2.69 1.3 3.15 4.66 1.38 7.19C18.7 16.65 12 21 12 21z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold leading-tight">Clínica Vital</h1>
+          <p class="text-sm text-teal-800/60">Agenda y gestiona tus citas</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="text-right">
+          <div id="userInfo" class="text-sm font-semibold leading-tight text-teal-900">—</div>
+          <div id="userRol" class="text-[11px] uppercase tracking-wide text-teal-800/50">—</div>
+        </div>
+        <button id="btnLogout" class="inline-flex items-center gap-1.5 rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm font-medium text-teal-800/70 transition hover:border-red-300 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600" aria-label="Cerrar sesión">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"/>
+          </svg>
+          <span class="hidden sm:inline">Salir</span>
+        </button>
+      </div>
+
+      <nav class="flex w-full rounded-full bg-teal-100/80 p-1 text-sm font-medium sm:w-auto" role="tablist" aria-label="Secciones">
+        <button id="tabBtnAgendar" class="flex-1 rounded-full px-4 py-2 text-teal-900 shadow-sm sm:flex-none" role="tab" aria-selected="true" aria-controls="tabAgendar">
+          Agendar cita
+        </button>
+        <button id="tabBtnCitas" class="flex-1 rounded-full px-4 py-2 text-teal-800/60 transition-colors hover:text-teal-900 sm:flex-none" role="tab" aria-selected="false" aria-controls="tabMisCitas">
+          Mis citas
+        </button>
+        <button id="tabBtnCalendario" class="flex-1 rounded-full px-4 py-2 text-teal-800/60 transition-colors hover:text-teal-900 sm:flex-none" role="tab" aria-selected="false" aria-controls="tabCalendario">
+          Calendario
+        </button>
+      </nav>
+    </header>
+
+    <main id="tabAgendar" role="tabpanel" aria-labelledby="tabBtnAgendar">
+
+      <section class="rounded-2xl border border-teal-100 bg-white p-5 shadow-sm">
+        <label for="selectMedico" class="mb-2 block text-xs font-semibold uppercase tracking-wide text-teal-800/60">
+          Médico
+        </label>
+        <div class="relative">
+          <select id="selectMedico" class="w-full appearance-none rounded-xl border border-teal-200 bg-white px-4 py-3 pr-10 text-[15px] font-medium text-teal-900 shadow-sm transition focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+            <option value="" disabled selected>Cargando médicos…</option>
+          </select>
+          <svg xmlns="http://www.w3.org/2000/svg" class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-teal-800/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+          </svg>
+        </div>
+
+        <div class="my-5 border-t border-dashed border-teal-100"></div>
+
+        <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-teal-800/60">
+          Fecha
+        </label>
+        <div id="dateStrip" class="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="list" aria-label="Fechas disponibles"></div>
+      </section>
+
+      <section class="mt-6">
+        <div class="mb-3 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-bold">Horarios disponibles</h2>
+            <p id="fechaBadge" class="text-sm text-teal-800/60">—</p>
+          </div>
+          <button id="btnRefresh" class="inline-flex items-center gap-1.5 rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm font-medium text-teal-800/70 transition hover:border-cyan-600 hover:text-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600" aria-label="Actualizar horarios">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
+            </svg>
+            <span>Actualizar</span>
+          </button>
+        </div>
+        <div id="bloquesGrid" class="grid grid-cols-2 gap-2.5 sm:grid-cols-3" role="grid" aria-busy="true"></div>
+      </section>
+
+    </main>
+
+    <main id="tabMisCitas" class="hidden" role="tabpanel" aria-labelledby="tabBtnCitas">
+
+      <section class="rounded-2xl border border-teal-100 bg-white p-5 shadow-sm">
+        <h2 class="text-base font-bold">Buscar mi cita</h2>
+        <p class="mt-1 text-sm text-teal-800/60">Ingresa tu código de cancelación o tu número de teléfono para ver y cancelar tu cita.</p>
+
+        <div class="mt-4">
+          <label for="inputBuscar" class="mb-2 block text-xs font-semibold uppercase tracking-wide text-teal-800/60">
+            Código de cancelación o teléfono
+          </label>
+          <div class="flex gap-2">
+            <input id="inputBuscar" type="text" inputmode="text" autocomplete="off" placeholder="Ej. b857de8d… o 3123456789"
+                   class="w-full rounded-xl border border-teal-200 bg-white px-4 py-3 text-[15px] shadow-sm transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+            <button id="btnBuscar" class="inline-flex shrink-0 items-center gap-2 rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 focus-visible:ring-offset-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+              </svg>
+              <span>Buscar</span>
+            </button>
+          </div>
+          <p id="buscarError" class="mt-2 hidden text-sm text-red-600" role="alert"></p>
+        </div>
+      </section>
+
+      <section id="citasResultados" class="mt-6"></section>
+
+    </main>
+
+    <main id="tabCalendario" class="hidden" role="tabpanel" aria-labelledby="tabBtnCalendario">
+
+      <section class="rounded-2xl border border-teal-100 bg-white shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-teal-100 p-4 sm:p-5">
+          <div>
+            <h2 class="text-base font-bold">Calendario de citas</h2>
+            <p class="text-sm text-teal-800/60">Horas agendadas por médico, vista semanal</p>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button id="calPrev" class="grid h-9 w-9 place-items-center rounded-xl border border-teal-200 bg-white text-teal-800/70 transition hover:border-cyan-600 hover:text-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600" aria-label="Semana anterior">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+            </button>
+            <button id="calHoy" class="rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm font-medium text-teal-800/70 transition hover:border-cyan-600 hover:text-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">Hoy</button>
+            <button id="calNext" class="grid h-9 w-9 place-items-center rounded-xl border border-teal-200 bg-white text-teal-800/70 transition hover:border-cyan-600 hover:text-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600" aria-label="Semana siguiente">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
+            </button>
+            <button id="btnCalFull" class="inline-flex items-center gap-1.5 rounded-xl bg-cyan-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 focus-visible:ring-offset-2" aria-label="Ver calendario a pantalla completa">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/></svg>
+              <span class="hidden sm:inline">Pantalla completa</span>
+            </button>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 border-b border-teal-100 px-4 py-3 sm:px-5">
+          <label for="calSelectMedico" class="text-sm font-medium text-teal-900">Médico</label>
+          <div class="relative">
+            <select id="calSelectMedico" class="w-full appearance-none rounded-xl border border-teal-200 bg-white py-2 pl-3 pr-9 text-sm font-medium text-teal-900 shadow-sm transition focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 sm:w-auto">
+              <option value="">Todos los médicos</option>
+            </select>
+            <svg xmlns="http://www.w3.org/2000/svg" class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-teal-800/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+            </svg>
+          </div>
+          <p id="calSemana" class="text-sm font-semibold sm:ml-2">—</p>
+          <p class="ml-auto flex items-center gap-1.5 text-xs text-teal-800/50">
+            <span class="inline-block h-2.5 w-2.5 rounded-sm bg-cyan-600"></span>
+            Cita agendada
+          </p>
+        </div>
+        <div id="calGrid" class="overflow-x-auto p-4 sm:p-5" aria-busy="true"></div>
+      </section>
+
+      <section id="calDetalle" class="mt-4 hidden rounded-2xl border border-teal-100 bg-white p-5 shadow-sm"></section>
+
+    </main>
+
+    <footer class="mt-10 text-center text-xs text-teal-800/40">
+      Clínica Vital · Sistema de citas en línea
+    </footer>
+  </div>
+
+  <div id="calFullscreen" class="fixed inset-0 z-[70] hidden overflow-auto bg-teal-50">
+    <div class="sticky top-0 z-10 border-b border-teal-100 bg-white/95 backdrop-blur">
+      <div class="mx-auto flex max-w-[1100px] flex-wrap items-center justify-between gap-3 p-4">
+        <div>
+          <h2 class="text-lg font-bold">Calendario de citas</h2>
+          <p id="calFullSemana" class="text-sm text-teal-800/60">—</p>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <div class="relative">
+            <select id="calFullSelectMedico" class="w-full appearance-none rounded-xl border border-teal-200 bg-white py-2 pl-3 pr-9 text-sm font-medium text-teal-900 shadow-sm transition focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 sm:w-auto" aria-label="Filtrar por médico">
+              <option value="">Todos los médicos</option>
+            </select>
+            <svg xmlns="http://www.w3.org/2000/svg" class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-teal-800/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+            </svg>
+          </div>
+          <button id="calFullPrev" class="grid h-9 w-9 place-items-center rounded-xl border border-teal-200 bg-white text-teal-800/70 transition hover:border-cyan-600 hover:text-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600" aria-label="Semana anterior">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+          </button>
+          <button id="calFullHoy" class="rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm font-medium text-teal-800/70 transition hover:border-cyan-600 hover:text-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">Hoy</button>
+          <button id="calFullNext" class="grid h-9 w-9 place-items-center rounded-xl border border-teal-200 bg-white text-teal-800/70 transition hover:border-cyan-600 hover:text-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600" aria-label="Semana siguiente">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
+          </button>
+          <button id="calFullSalir" class="inline-flex items-center gap-1.5 rounded-xl bg-teal-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-teal-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2" aria-label="Cerrar pantalla completa">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+            <span>Cerrar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="mx-auto max-w-[1100px] p-4">
+      <div id="calFullGrid" class="overflow-x-auto" aria-busy="true"></div>
+      <section id="calFullDetalle" class="mt-4 hidden rounded-2xl border border-teal-100 bg-white p-5 shadow-sm"></section>
+    </div>
+  </div>
+
+  <div id="modalOverlay" class="fixed inset-0 z-50 hidden bg-teal-950/40 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="modalTitulo">
+    <div id="modalCard" class="modal-enter mx-auto mt-8 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl sm:mt-16">
+      <button id="btnCerrarModal" class="absolute top-4 right-4 grid h-9 w-9 place-items-center rounded-full text-teal-800/40 transition hover:bg-teal-50 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600" aria-label="Cerrar">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+        </svg>
+      </button>
+
+      <div id="modalFormView">
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5"/>
+          </svg>
+          <span id="modalResumen">—</span>
+        </span>
+        <h3 id="modalTitulo" class="mt-3 text-lg font-bold">Agendar cita</h3>
+
+        <form id="formAgendar" class="mt-4 space-y-4" novalidate>
+          <div>
+            <label for="inputNombre" class="mb-1.5 block text-sm font-medium text-teal-900">Nombre completo <span class="text-red-500">*</span></label>
+            <input id="inputNombre" type="text" autocomplete="name" placeholder="Ej. Juan Pérez" class="w-full rounded-xl border border-teal-200 bg-white px-4 py-2.5 text-[15px] transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+            <p id="errNombre" class="mt-1 hidden text-sm text-red-600"></p>
+          </div>
+          <div>
+            <label for="inputTelefono" class="mb-1.5 block text-sm font-medium text-teal-900">Teléfono de contacto <span class="text-red-500">*</span></label>
+            <input id="inputTelefono" type="tel" autocomplete="tel" inputmode="numeric" placeholder="Ej. 3123456789" class="w-full rounded-xl border border-teal-200 bg-white px-4 py-2.5 text-[15px] transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+            <p id="errTelefono" class="mt-1 hidden text-sm text-red-600"></p>
+          </div>
+          <div>
+            <label for="inputEmail" class="mb-1.5 block text-sm font-medium text-teal-900">Correo electrónico <span class="text-teal-800/40">(opcional)</span></label>
+            <input id="inputEmail" type="email" autocomplete="email" placeholder="Ej. juan@mail.com" class="w-full rounded-xl border border-teal-200 bg-white px-4 py-2.5 text-[15px] transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+            <p id="errEmail" class="mt-1 hidden text-sm text-red-600"></p>
+          </div>
+          <button id="btnAgendar" type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70">
+            <span>Agendar cita</span>
+          </button>
+        </form>
+      </div>
+
+      <div id="modalExitoView" class="hidden text-center">
+        <div class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-green-100 text-green-600">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
+          </svg>
+        </div>
+        <h3 class="mt-4 text-xl font-bold">¡Cita confirmada!</h3>
+        <p class="mt-1 text-sm text-teal-800/60">Te esperamos en Clínica Vital.</p>
+
+        <div class="mt-5 space-y-2.5 rounded-xl bg-teal-50 p-4 text-left text-sm">
+          <div class="flex justify-between gap-3"><span class="text-teal-800/60">Médico</span><span id="exitoMedico" class="text-right font-semibold"></span></div>
+          <div class="flex justify-between gap-3"><span class="text-teal-800/60">Fecha</span><span id="exitoFecha" class="text-right font-semibold"></span></div>
+          <div class="flex justify-between gap-3"><span class="text-teal-800/60">Hora</span><span id="exitoHora" class="text-right font-semibold"></span></div>
+          <div class="flex justify-between gap-3"><span class="text-teal-800/60">Paciente</span><span id="exitoPaciente" class="text-right font-semibold"></span></div>
+        </div>
+
+        <div class="mt-5 text-left">
+          <p class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-teal-800/60">Código de cancelación</p>
+          <button id="exitoCodigo" class="flex w-full items-center justify-between gap-2 rounded-xl border border-dashed border-cyan-600/50 bg-cyan-50 px-4 py-3 text-left font-mono text-sm text-cyan-800 transition hover:bg-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600" title="Copiar código">
+            <span id="exitoCodigoTexto" class="truncate"></span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"/>
+            </svg>
+          </button>
+          <p class="mt-2 text-xs text-teal-800/50">Guarda este código. Lo necesitarás para cancelar tu cita.</p>
+        </div>
+
+        <button id="btnListo" class="mt-6 w-full rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 focus-visible:ring-offset-2">
+          Listo
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="pointer-events-none fixed right-4 top-4 z-[60] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2" aria-live="polite" aria-atomic="false"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var API_BASE = location.protocol === 'file:' ? 'http://127.0.0.1:8000' : '';
+
+  var DIAS_ESP = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  var MESES_ESP = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+  var state = {
+    medicos: [],
+    medicoId: null,
+    fecha: null,
+    bloques: [],
+    bloqueSeleccionado: null,
+    semanaInicio: null,
+    semanaCitas: [],
+    calMedicoId: null,
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var selectMedico = $('selectMedico');
+  var dateStrip = $('dateStrip');
+  var bloquesGrid = $('bloquesGrid');
+  var fechaBadge = $('fechaBadge');
+  var modalOverlay = $('modalOverlay');
+  var modalCard = $('modalCard');
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+
+  function descFecha(isoStr) {
+    var p = isoStr.split('-');
+    var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    return DIAS_ESP[d.getDay()] + ' ' + d.getDate() + ' ' + MESES_ESP[d.getMonth()] + ' ' + d.getFullYear();
+  }
+
+  function cortoFecha(isoStr) {
+    var p = isoStr.split('-');
+    var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    return DIAS_ESP[d.getDay()] + ' ' + d.getDate();
+  }
+
+  function spinnerSvg(extra) {
+    return '<svg class="h-4 w-4 animate-spin ' + (extra || '') + '" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v3a5 5 0 0 0-5 5H4z"></path></svg>';
+  }
+
+  function iconoToast(tipo) {
+    if (tipo === 'success') return '<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>';
+    if (tipo === 'error') return '<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>';
+    return '<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/></svg>';
+  }
+
+  function toast(mensaje, tipo) {
+    tipo = tipo || 'info';
+    var colores = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-teal-800' };
+    var el = document.createElement('div');
+    el.className = 'toast-enter pointer-events-auto flex items-start gap-3 rounded-xl px-4 py-3 text-sm font-medium text-white shadow-lg transition-opacity duration-300 ' + colores[tipo];
+    el.setAttribute('role', 'status');
+    el.innerHTML = '<span class="mt-0.5 shrink-0">' + iconoToast(tipo) + '</span><span>' + mensaje + '</span>';
+    $('toastContainer').appendChild(el);
+    setTimeout(function () {
+      el.classList.add('opacity-0');
+      setTimeout(function () { el.remove(); }, 320);
+    }, 4500);
+  }
+
+  function getToken() { return localStorage.getItem('clinica_token') || ''; }
+
+  function getUsuario() {
+    try { return JSON.parse(localStorage.getItem('clinica_usuario') || 'null'); }
+    catch (e) { return null; }
+  }
+
+  function guardarCredenciales(token, u) {
+    localStorage.setItem('clinica_token', token);
+    localStorage.setItem('clinica_usuario', JSON.stringify(u));
+  }
+
+  function limpiarCredenciales() {
+    localStorage.removeItem('clinica_token');
+    localStorage.removeItem('clinica_usuario');
+  }
+
+  function api(path, opts) {
+    opts = opts || {};
+    var headers = Object.assign({}, opts.headers || {});
+    var token = getToken();
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    opts.headers = headers;
+    return fetch(API_BASE + path, opts).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        if (res.status === 401 && !opts.noAuthRedirect) {
+          limpiarCredenciales();
+          mostrarLogin();
+        }
+        if (!res.ok) {
+          var detalle = data && data.detail ? data.detail : 'Error ' + res.status;
+          if (typeof detalle === 'object') detalle = detalle.msg || JSON.stringify(detalle);
+          throw new Error(detalle);
+        }
+        return data;
+      });
+    });
+  }
+
+  function actualizarUserBar() {
+    var u = getUsuario();
+    $('userInfo').textContent = u ? u.nombre : '—';
+    var rol = u ? u.rol : '';
+    $('userRol').textContent = rol === 'admin' ? 'Administrador' : (rol === 'medico' ? 'Médico' : 'Recepcionista');
+  }
+
+  function mostrarLogin() {
+    $('loginScreen').classList.remove('hidden');
+    $('appShell').classList.add('hidden');
+    modalOverlay.classList.add('hidden');
+    if (!$('calFullscreen').classList.contains('hidden')) cerrarCalendarioCompleto();
+    document.body.style.overflow = '';
+    setTimeout(function () { $('loginUsuario').focus(); }, 60);
+  }
+
+  function inicializarApp() {
+    $('loginScreen').classList.add('hidden');
+    $('appShell').classList.remove('hidden');
+    actualizarUserBar();
+    renderDateStrip();
+    state.semanaInicio = lunesDe(new Date());
+    cargarMedicos();
+    aplicarHash();
+    window.addEventListener('hashchange', aplicarHash);
+  }
+
+  function iniciarSesion(ev) {
+    ev.preventDefault();
+    var err = $('loginError');
+    err.classList.add('hidden');
+    var usuario = $('loginUsuario').value.trim();
+    var password = $('loginPassword').value;
+    if (!usuario || !password) {
+      err.textContent = 'Ingresa tu usuario y contraseña.';
+      err.classList.remove('hidden');
+      return;
+    }
+    var btn = $('btnLogin');
+    btn.disabled = true;
+    btn.innerHTML = spinnerSvg() + '<span>Ingresando…</span>';
+    api('/api/auth/login', {
+      method: 'POST',
+      noAuthRedirect: true,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usuario: usuario, password: password }),
+    }).then(function (data) {
+      guardarCredenciales(data.token, data);
+      inicializarApp();
+      toast('Bienvenido, ' + data.nombre + '.', 'success');
+    }).catch(function (e) {
+      err.textContent = e.message;
+      err.classList.remove('hidden');
+      btn.disabled = false;
+      btn.innerHTML = '<span>Ingresar</span>';
+    });
+  }
+
+  function cerrarSesion() {
+    var token = getToken();
+    limpiarCredenciales();
+    mostrarLogin();
+    if (token) {
+      api('/api/auth/logout', { method: 'POST', noAuthRedirect: true }).catch(function () {});
+    }
+  }
+
+  function verificarSesion() {
+    if (!getToken()) { mostrarLogin(); return; }
+    api('/api/auth/me').then(function (usuario) {
+      guardarCredenciales(getToken(), usuario);
+      inicializarApp();
+    }).catch(function () {
+      limpiarCredenciales();
+      mostrarLogin();
+    });
+  }
+
+  function limpiarError(e) {
+    var el = e.currentTarget;
+    el.classList.remove('border-red-500');
+    el.classList.add('border-teal-200');
+  }
+
+  function marcarError(inputId, errId, mensaje) {
+    $(errId).textContent = mensaje;
+    $(errId).classList.remove('hidden');
+    var inp = $(inputId);
+    inp.classList.remove('border-teal-200');
+    inp.classList.add('border-red-500');
+    inp.focus();
+  }
+  function quitarError(errId, inputId) {
+    $(errId).classList.add('hidden');
+    var inp = $(inputId);
+    if (inp) { inp.classList.remove('border-red-500'); inp.classList.add('border-teal-200'); }
+  }
+
+  function mostrarSkeleton() {
+    bloquesGrid.setAttribute('aria-busy', 'true');
+    bloquesGrid.innerHTML = Array(6).fill('<div class="h-[72px] rounded-xl bg-teal-100/70 animate-pulse"></div>').join('');
+  }
+
+  function renderDateStrip() {
+    var hoy = new Date();
+    var fragment = document.createDocumentFragment();
+    for (var i = 0; i < 14; i++) {
+      var d = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + i);
+      var f = iso(d);
+      var esHoy = i === 0;
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.dataset.fecha = f;
+      btn.setAttribute('role', 'listitem');
+      btn.setAttribute('aria-pressed', 'false');
+      btn.className = 'date-card min-w-[64px] shrink-0 rounded-xl border border-teal-200 bg-white px-3 py-2 text-center transition-colors duration-150 hover:border-cyan-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600';
+      btn.innerHTML =
+        '<div class="text-[11px] font-semibold uppercase tracking-wide ' + (esHoy ? 'text-cyan-600' : 'text-teal-800/50') + '">' + (esHoy ? 'Hoy' : DIAS_ESP[d.getDay()]) + '</div>' +
+        '<div class="text-lg font-bold leading-tight text-teal-900">' + d.getDate() + '</div>' +
+        '<div class="text-[11px] text-teal-800/50">' + MESES_ESP[d.getMonth()] + '</div>';
+      fragment.appendChild(btn);
+    }
+    dateStrip.innerHTML = '';
+    dateStrip.appendChild(fragment);
+    seleccionarFecha(hoy);
+  }
+
+  function seleccionarFecha(fecha) {
+    if (typeof fecha !== 'string') fecha = iso(fecha);
+    state.fecha = fecha;
+    var cards = dateStrip.querySelectorAll('.date-card');
+    cards.forEach(function (c) {
+      var activo = c.dataset.fecha === fecha;
+      c.setAttribute('aria-pressed', String(activo));
+      c.classList.toggle('border-cyan-600', activo);
+      c.classList.toggle('bg-cyan-600', activo);
+      c.classList.toggle('text-white', activo);
+      var kids = c.querySelectorAll('div');
+      if (activo) {
+        kids[0].classList.remove('text-cyan-600', 'text-teal-800/50');
+        kids[0].classList.add('text-cyan-100');
+        kids[1].classList.add('text-white');
+        kids[2].classList.add('text-cyan-100');
+      } else {
+        kids[0].classList.remove('text-cyan-100');
+        kids[0].className = 'text-[11px] font-semibold uppercase tracking-wide text-teal-800/50';
+        kids[1].classList.remove('text-white');
+        kids[2].classList.remove('text-cyan-100');
+      }
+    });
+    fechaBadge.textContent = descFecha(fecha);
+    cargarBloques();
+  }
+
+  function cargarMedicos() {
+    selectMedico.disabled = true;
+    api('/api/medicos').then(function (data) {
+      state.medicos = data.medicos || [];
+      selectMedico.innerHTML = '';
+      state.medicos.forEach(function (m) {
+        var opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.nombre + ' · ' + m.especialidad;
+        selectMedico.appendChild(opt);
+      });
+      selectMedico.disabled = false;
+      var usuario = getUsuario();
+      var soloMedico = usuario && usuario.rol === 'medico' && usuario.medico_id;
+      if (state.medicos.length) {
+        state.medicoId = soloMedico ? Number(usuario.medico_id) : state.medicos[0].id;
+        selectMedico.value = state.medicoId;
+        selectMedico.disabled = !!soloMedico;
+        cargarBloques();
+      } else {
+        toast('No hay médicos registrados.', 'error');
+      }
+      poblarSelectsCalendario();
+      recargarCalendario();
+    }).catch(function (err) {
+      selectMedico.innerHTML = '<option value="">No se pudo cargar la lista de médicos</option>';
+      toast('No se pudo conectar con el servidor. Revisa que el backend esté activo.', 'error');
+    });
+  }
+
+  function cargarBloques() {
+    if (!state.medicoId || !state.fecha) return;
+    mostrarSkeleton();
+    fechaBadge.textContent = descFecha(state.fecha);
+    api('/api/disponibilidad?medico_id=' + state.medicoId + '&fecha=' + state.fecha).then(function (data) {
+      state.bloques = data.bloques || [];
+      renderBloques();
+      bloquesGrid.setAttribute('aria-busy', 'false');
+    }).catch(function (err) {
+      bloquesGrid.setAttribute('aria-busy', 'false');
+      bloquesGrid.innerHTML = '<div class="col-span-full rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-600">No se pudieron cargar los horarios.</div>';
+      toast(err.message, 'error');
+    });
+  }
+
+  function renderBloques() {
+    if (!state.bloques.length) {
+      bloquesGrid.innerHTML =
+        '<div class="col-span-full flex flex-col items-center gap-2 rounded-xl border border-dashed border-teal-200 bg-white p-8 text-center">' +
+        '<svg class="h-8 w-8 text-teal-800/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/></svg>' +
+        '<p class="text-sm font-medium text-teal-900">Sin horarios disponibles</p>' +
+        '<p class="text-sm text-teal-800/50">Prueba con otra fecha o selecciona otro médico.</p>' +
+        '</div>';
+      return;
+    }
+    bloquesGrid.innerHTML = state.bloques.map(function (b) {
+      return '<button type="button" data-bloque-id="' + b.id + '" class="group flex items-center justify-between gap-2 rounded-xl border border-teal-200 bg-white px-4 py-3 text-left transition-colors duration-150 hover:border-cyan-600 hover:bg-cyan-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600" role="gridcell">' +
+        '<div><div class="text-base font-bold text-teal-900">' + b.hora_inicio + '</div>' +
+        '<div class="text-xs text-teal-800/50">' + b.hora_fin + '</div></div>' +
+        '<svg class="h-4 w-4 shrink-0 text-cyan-600 opacity-0 transition-opacity group-hover:opacity-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg>' +
+        '</button>';
+    }).join('');
+  }
+
+  function nombreMedico(id) {
+    var m = state.medicos.find(function (x) { return x.id === Number(id); });
+    return m ? m.nombre : '—';
+  }
+
+  function abrirModal(bloque) {
+    state.bloqueSeleccionado = bloque;
+    var medico = nombreMedico(state.medicoId);
+    $('modalResumen').textContent = medico + ' · ' + cortoFecha(bloque.fecha) + ' · ' + bloque.hora_inicio;
+    $('modalTitulo').textContent = 'Agendar cita · ' + bloque.hora_inicio + ' a ' + bloque.hora_fin;
+    $('formAgendar').reset();
+    quitarError('errNombre', 'inputNombre');
+    quitarError('errTelefono', 'inputTelefono');
+    quitarError('errEmail', 'inputEmail');
+    $('modalFormView').classList.remove('hidden');
+    $('modalExitoView').classList.add('hidden');
+    modalOverlay.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    setTimeout(function () { $('inputNombre').focus(); }, 60);
+  }
+
+  function cerrarModal() {
+    modalOverlay.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  function validarTelefono(t) { return /^\d{7,15}$/.test(t); }
+  function validarEmail(e) { return !e || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e); }
+
+  function enviarFormulario(ev) {
+    ev.preventDefault();
+    var ok = true;
+    var nombre = $('inputNombre').value.trim();
+    var tel = $('inputTelefono').value.trim();
+    var email = $('inputEmail').value.trim();
+
+    if (nombre.length < 2) {
+      marcarError('inputNombre', 'errNombre', 'Ingresa tu nombre completo.');
+      ok = false;
+    } else { quitarError('errNombre', 'inputNombre'); }
+
+    if (!validarTelefono(tel)) {
+      marcarError('inputTelefono', 'errTelefono', 'Ingresa un teléfono válido (7 a 15 dígitos).');
+      ok = false;
+    } else { quitarError('errTelefono', 'inputTelefono'); }
+
+    if (!validarEmail(email)) {
+      marcarError('inputEmail', 'errEmail', 'Ingresa un correo válido o déjalo vacío.');
+      ok = false;
+    } else { quitarError('errEmail', 'inputEmail'); }
+
+    if (!ok || !state.bloqueSeleccionado) return;
+
+    var btn = $('btnAgendar');
+    btn.disabled = true;
+    btn.innerHTML = spinnerSvg('') + '<span>Agendando…</span>';
+
+    api('/api/agendar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bloque_id: state.bloqueSeleccionado.id,
+        paciente_nombre: nombre,
+        paciente_telefono: tel,
+        paciente_email: email,
+      }),
+    }).then(function (data) {
+      mostrarExito(data);
+      cargarBloques();
+      recargarCalendario();
+      toast('Cita agendada correctamente.', 'success');
+    }).catch(function (err) {
+      toast(err.message, 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<span>Agendar cita</span>';
+    });
+  }
+
+  function copiar(texto) {
+    var p = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(texto) : Promise.reject();
+    p.then(function () { toast('Código copiado al portapapeles.', 'info'); })
+     .catch(function () {
+        var ta = document.createElement('textarea');
+        ta.value = texto;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); toast('Código copiado.', 'info'); } catch (e) {}
+        ta.remove();
+      });
+  }
+
+  function mostrarExito(cita) {
+    $('exitoMedico').textContent = cita.medico || nombreMedico(state.medicoId);
+    $('exitoFecha').textContent = descFecha(cita.fecha);
+    $('exitoHora').textContent = cita.hora_inicio + ' a ' + cita.hora_fin;
+    $('exitoPaciente').textContent = cita.paciente_nombre;
+    $('exitoCodigoTexto').textContent = cita.id_cancelacion;
+    $('exitoCodigo').onclick = function () { copiar(cita.id_cancelacion); };
+    $('modalFormView').classList.add('hidden');
+    $('modalExitoView').classList.remove('hidden');
+  }
+
+  function cambiarTab(tab) {
+    var paneles = { agendar: 'tabAgendar', citas: 'tabMisCitas', calendario: 'tabCalendario' };
+    var botones = { agendar: 'tabBtnAgendar', citas: 'tabBtnCitas', calendario: 'tabBtnCalendario' };
+    Object.keys(paneles).forEach(function (t) {
+      var activo = t === tab;
+      $(paneles[t]).classList.toggle('hidden', !activo);
+      $(botones[t]).setAttribute('aria-selected', String(activo));
+      $(botones[t]).className = 'flex-1 rounded-full px-4 py-2 sm:flex-none ' + (activo ? 'bg-white text-teal-900 shadow-sm' : 'text-teal-800/60 transition-colors hover:text-teal-900');
+    });
+    if (tab === 'calendario') renderCalendario();
+  }
+
+  function mostrarBuscarError(msg) {
+    var e = $('buscarError');
+    e.textContent = msg;
+    e.classList.remove('hidden');
+  }
+
+  function buscarCitas() {
+    var valor = $('inputBuscar').value.trim();
+    var e = $('buscarError');
+    e.classList.add('hidden');
+    if (!valor) { mostrarBuscarError('Ingresa un código o un teléfono.'); return; }
+
+    var params;
+    if (/^[0-9a-f]{32}$/i.test(valor)) params = 'id_cancelacion=' + encodeURIComponent(valor);
+    else if (/^\d{7,15}$/.test(valor)) params = 'telefono=' + encodeURIComponent(valor);
+    else { mostrarBuscarError('El código de cancelación son 32 caracteres o un teléfono de 7 a 15 dígitos.'); return; }
+
+    var btn = $('btnBuscar');
+    btn.disabled = true;
+    var original = btn.innerHTML;
+    btn.innerHTML = spinnerSvg('') + '<span>Buscando…</span>';
+
+    $('citasResultados').innerHTML = '<div class="flex items-center justify-center gap-2 rounded-xl border border-teal-100 bg-white p-8 text-sm text-teal-800/60">' + spinnerSvg('text-cyan-600') + 'Buscando tus citas…</div>';
+
+    api('/api/citas?' + params).then(function (data) {
+      renderCitas(data.citas || []);
+    }).catch(function (err) {
+      $('citasResultados').innerHTML = '';
+      toast(err.message, 'error');
+    }).finally(function () {
+      btn.disabled = false;
+      btn.innerHTML = original;
+    });
+  }
+
+  function renderCitas(citas) {
+    if (!citas.length) {
+      $('citasResultados').innerHTML =
+        '<div class="flex flex-col items-center gap-2 rounded-xl border border-dashed border-teal-200 bg-white p-8 text-center">' +
+        '<svg class="h-8 w-8 text-teal-800/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/></svg>' +
+        '<p class="text-sm font-medium text-teal-900">No se encontraron citas con esos datos.</p>' +
+        '<p class="text-sm text-teal-800/50">Verifica el código o el teléfono e inténtalo de nuevo.</p>' +
+        '</div>';
+      return;
+    }
+    $('citasResultados').innerHTML = citas.map(function (c) {
+      return '<article class="fade-in mb-3 rounded-2xl border border-teal-100 bg-white p-5 shadow-sm">' +
+        '<div class="flex items-start justify-between gap-3">' +
+          '<div>' +
+            '<h3 class="font-bold">' + c.medico + '</h3>' +
+            '<p class="text-sm text-teal-800/60">' + c.especialidad + '</p>' +
+          '</div>' +
+          '<span class="rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">' + cortoFecha(c.fecha) + ' · ' + c.hora_inicio + '</span>' +
+        '</div>' +
+        '<div class="mt-4 grid grid-cols-2 gap-3 text-sm">' +
+          '<div><div class="text-xs text-teal-800/50">Paciente</div><div class="font-medium">' + c.paciente_nombre + '</div></div>' +
+          '<div><div class="text-xs text-teal-800/50">Teléfono</div><div class="font-medium">' + c.paciente_telefono + '</div></div>' +
+        '</div>' +
+        '<div class="mt-4 flex flex-wrap items-center gap-2 border-t border-dashed border-teal-100 pt-4">' +
+          '<button type="button" data-copiar="' + c.id_cancelacion + '" class="inline-flex items-center gap-1.5 rounded-lg border border-teal-200 bg-white px-3 py-2 text-xs font-semibold text-teal-800/70 transition hover:border-cyan-600 hover:text-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">' +
+            '<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"/></svg>' +
+            'Copiar código' +
+          '</button>' +
+          '<button type="button" data-cancelar="' + c.id_cancelacion + '" class="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600">' +
+            '<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>' +
+            'Cancelar cita' +
+          '</button>' +
+        '</div>' +
+        '<p class="mt-2 hidden font-mono text-[11px] text-teal-800/40 break-all">' + c.id_cancelacion + '</p>' +
+        '</article>';
+    }).join('');
+  }
+
+  function desarmarCancelacion(btn) {
+    btn.dataset.armed = '';
+    btn.classList.remove('bg-red-600', 'text-white');
+    btn.classList.add('border-red-200', 'bg-white', 'text-red-600');
+    btn.innerHTML = btn.dataset.originalHtml || 'Cancelar cita';
+  }
+
+  function ejecutarCancelacion(btn) {
+    var code = btn.dataset.cancelar;
+    btn.disabled = true;
+    btn.innerHTML = spinnerSvg('') + '<span>Cancelando…</span>';
+    btn.classList.remove('bg-red-600', 'text-white');
+    btn.classList.add('bg-red-100', 'border-red-300', 'text-red-600');
+
+    api('/api/cancelar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id_cancelacion: code }),
+    }).then(function () {
+      var card = btn.closest('article');
+      if (card) {
+        card.style.transition = 'opacity .25s';
+        card.style.opacity = '0';
+        setTimeout(function () { card.remove(); }, 260);
+      }
+      toast('Cita cancelada. El horario quedó disponible nuevamente.', 'success');
+      cargarBloques();
+      recargarCalendario();
+    }).catch(function (err) {
+      toast(err.message, 'error');
+      btn.disabled = false;
+      desarmarCancelacion(btn);
+    });
+  }
+
+  function lunesDe(d) {
+    var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+    return x;
+  }
+
+  function sumarDias(d, n) {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  }
+
+  function tituloSemana() {
+    var ini = state.semanaInicio;
+    var fin = sumarDias(ini, 6);
+    if (ini.getMonth() === fin.getMonth()) {
+      return ini.getDate() + ' – ' + fin.getDate() + ' ' + MESES_ESP[fin.getMonth()] + ' ' + fin.getFullYear();
+    }
+    return ini.getDate() + ' ' + MESES_ESP[ini.getMonth()] + ' – ' + fin.getDate() + ' ' + MESES_ESP[fin.getMonth()] + ' ' + fin.getFullYear();
+  }
+
+  function renderCalendario() {
+    if (!state.medicos.length) return;
+    var grid = $('calGrid');
+    grid.setAttribute('aria-busy', 'true');
+    grid.innerHTML = '<div class="space-y-2 animate-pulse">' + Array(3).fill('<div class="h-14 rounded-xl bg-teal-100/70"></div>').join('') + '</div>';
+    $('calSemana').textContent = tituloSemana();
+    $('calDetalle').classList.add('hidden');
+
+    var mon = iso(state.semanaInicio);
+    var dom = iso(sumarDias(state.semanaInicio, 6));
+
+    api('/api/citas?fecha_inicio=' + mon + '&fecha_fin=' + dom).then(function (data) {
+      state.semanaCitas = data.citas || [];
+      pintarCalendario();
+      grid.setAttribute('aria-busy', 'false');
+    }).catch(function (err) {
+      grid.setAttribute('aria-busy', 'false');
+      grid.innerHTML = '<div class="rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-600">No se pudo cargar el calendario.</div>';
+      toast(err.message, 'error');
+    });
+  }
+
+  function pintarCalendario(contenedor) {
+    contenedor = contenedor || $('calGrid');
+    var hoy = iso(new Date());
+    var medicosVista = state.calMedicoId
+      ? state.medicos.filter(function (m) { return m.id === state.calMedicoId; })
+      : state.medicos;
+    var porCelda = {};
+    state.semanaCitas.forEach(function (c, idx) {
+      var k = c.medico_id + '|' + c.fecha;
+      (porCelda[k] = porCelda[k] || []).push({ cita: c, idx: idx });
+    });
+
+    var dias = [];
+    for (var i = 0; i < 7; i++) {
+      var d = sumarDias(state.semanaInicio, i);
+      dias.push({ iso: iso(d), nombre: DIAS_ESP[d.getDay()], dia: d.getDate(), esHoy: iso(d) === hoy });
+    }
+
+    var html = '<div class="min-w-[680px]">';
+    html += '<div class="grid gap-x-1" style="grid-template-columns: 160px repeat(7, 1fr);">';
+
+    html += '<div></div>';
+    dias.forEach(function (d) {
+      html += '<div class="pb-2 text-center">' +
+        '<div class="text-[11px] font-semibold uppercase tracking-wide ' + (d.esHoy ? 'text-cyan-600' : 'text-teal-800/50') + '">' + d.nombre + '</div>' +
+        '<div class="' + (d.esHoy ? 'mx-auto grid h-7 w-7 place-items-center rounded-full bg-cyan-600 text-sm font-bold text-white' : 'text-sm font-bold text-teal-900') + '">' + d.dia + '</div>' +
+        '</div>';
+    });
+
+    medicosVista.forEach(function (med) {
+      html += '<div class="flex flex-col justify-center border-t border-teal-100 py-2 pr-3">' +
+        '<div class="text-sm font-bold leading-tight text-teal-900">' + med.nombre + '</div>' +
+        '<div class="text-[11px] text-teal-800/50">' + med.especialidad + '</div>' +
+        '</div>';
+      for (var i = 0; i < 7; i++) {
+        var d = dias[i];
+        var lista = porCelda[med.id + '|' + d.iso] || [];
+        var cls = 'min-h-[84px] rounded-lg border px-1.5 py-1 ' + (d.esHoy ? 'border-cyan-200 bg-teal-50/70' : 'border-teal-100 bg-white');
+        html += '<div class="' + cls + '">';
+        if (lista.length) {
+          lista.forEach(function (item) {
+            var c = item.cita;
+            html += '<button type="button" data-cal-idx="' + item.idx + '" title="' + c.paciente_nombre + ' · ' + c.hora_inicio + '–' + c.hora_fin + '" class="mb-1 flex w-full items-start justify-between gap-1 rounded-md bg-cyan-600 px-1.5 py-1 text-left text-[11px] font-medium leading-tight text-white transition hover:bg-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">' +
+              '<span class="truncate">' + c.paciente_nombre + '</span>' +
+              '<span class="shrink-0 font-semibold">' + c.hora_inicio + '</span>' +
+              '</button>';
+          });
+        }
+        html += '</div>';
+      }
+    });
+
+    html += '</div></div>';
+    contenedor.innerHTML = html;
+  }
+
+  function mostrarDetalleCita(idx, contenedor) {
+    var c = state.semanaCitas[idx];
+    if (!c) return;
+    var det = contenedor || $('calDetalle');
+    det.classList.remove('hidden');
+    det.innerHTML =
+      '<div class="flex items-start justify-between gap-3">' +
+        '<div>' +
+          '<h3 class="font-bold">' + c.medico + '</h3>' +
+          '<p class="text-sm text-teal-800/60">' + c.especialidad + '</p>' +
+        '</div>' +
+        '<button type="button" class="cal-cerrar-detalle grid h-8 w-8 place-items-center rounded-full text-teal-800/40 transition hover:bg-teal-50 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600" aria-label="Cerrar detalle">' +
+          '<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>' +
+        '</button>' +
+      '</div>' +
+      '<dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">' +
+        '<div><dt class="text-xs text-teal-800/50">Paciente</dt><dd class="font-medium">' + c.paciente_nombre + '</dd></div>' +
+        '<div><dt class="text-xs text-teal-800/50">Teléfono</dt><dd class="font-medium">' + c.paciente_telefono + '</dd></div>' +
+        '<div><dt class="text-xs text-teal-800/50">Correo</dt><dd class="font-medium">' + (c.paciente_email || '—') + '</dd></div>' +
+        '<div><dt class="text-xs text-teal-800/50">Fecha y hora</dt><dd class="font-medium">' + descFecha(c.fecha) + ' · ' + c.hora_inicio + ' a ' + c.hora_fin + '</dd></div>' +
+      '</dl>' +
+      '<div class="mt-4 border-t border-dashed border-teal-100 pt-3">' +
+        '<span class="break-all font-mono text-xs text-teal-800/50">' + c.id_cancelacion + '</span>' +
+      '</div>';
+    var cerrar = det.querySelector('.cal-cerrar-detalle');
+    if (cerrar) cerrar.addEventListener('click', function () { det.classList.add('hidden'); });
+    det.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function abrirCalendarioCompleto() {
+    var ov = $('calFullscreen');
+    ov.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    renderCalendarioFull();
+    var el = ov;
+    if (el.requestFullscreen) {
+      el.requestFullscreen().catch(function () {});
+    } else if (el.webkitRequestFullscreen) {
+      el.webkitRequestFullscreen();
+    }
+  }
+
+  function cerrarCalendarioCompleto() {
+    var ov = $('calFullscreen');
+    ov.classList.add('hidden');
+    document.body.style.overflow = '';
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      if (document.exitFullscreen) document.exitFullscreen().catch(function () {});
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+  }
+
+  function renderCalendarioFull() {
+    var grid = $('calFullGrid');
+    grid.setAttribute('aria-busy', 'true');
+    grid.innerHTML = '<div class="space-y-2 animate-pulse">' + Array(3).fill('<div class="h-16 rounded-xl bg-teal-100/70"></div>').join('') + '</div>';
+    $('calFullSemana').textContent = tituloSemana();
+    $('calFullDetalle').classList.add('hidden');
+
+    var mon = iso(state.semanaInicio);
+    var dom = iso(sumarDias(state.semanaInicio, 6));
+
+    api('/api/citas?fecha_inicio=' + mon + '&fecha_fin=' + dom).then(function (data) {
+      state.semanaCitas = data.citas || [];
+      pintarCalendario(grid);
+      grid.setAttribute('aria-busy', 'false');
+    }).catch(function (err) {
+      grid.setAttribute('aria-busy', 'false');
+      grid.innerHTML = '<div class="rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-600">No se pudo cargar el calendario.</div>';
+      toast(err.message, 'error');
+    });
+  }
+
+  function cambiarSemana(delta) {
+    state.semanaInicio = sumarDias(state.semanaInicio, delta);
+    if (!$('tabCalendario').classList.contains('hidden')) renderCalendario();
+    if (!$('calFullscreen').classList.contains('hidden')) renderCalendarioFull();
+  }
+
+  function recargarCalendario() {
+    if (!$('tabCalendario').classList.contains('hidden')) renderCalendario();
+  }
+
+  function poblarSelectsCalendario() {
+    var usuario = getUsuario();
+    var soloMedico = usuario && usuario.rol === 'medico' && usuario.medico_id;
+    if (soloMedico) state.calMedicoId = Number(usuario.medico_id);
+    [$('calSelectMedico'), $('calFullSelectMedico')].forEach(function (sel) {
+      sel.innerHTML = '<option value="">Todos los médicos</option>';
+      state.medicos.forEach(function (m) {
+        var opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.nombre;
+        sel.appendChild(opt);
+      });
+      sel.value = state.calMedicoId === null ? '' : String(state.calMedicoId);
+      sel.disabled = !!soloMedico;
+    });
+  }
+
+  function aplicarFiltroMedicoCalendario(valor) {
+    state.calMedicoId = valor ? Number(valor) : null;
+    $('calSelectMedico').value = valor;
+    $('calFullSelectMedico').value = valor;
+    if (!$('tabCalendario').classList.contains('hidden')) renderCalendario();
+    if (!$('calFullscreen').classList.contains('hidden')) renderCalendarioFull();
+  }
+
+  function aplicarHash() {
+    var h = location.hash;
+    var m = h.match(/^#([\w-]+)(?:\?med=(\d+))?/);
+    if (m && m[2]) state.calMedicoId = Number(m[2]);
+    var tab = m ? m[1] : null;
+    if (tab === 'calendario') cambiarTab('calendario');
+    else if (tab === 'calendario-full') { cambiarTab('calendario'); abrirCalendarioCompleto(); }
+    else if (tab === 'citas' || tab === 'mis-citas') cambiarTab('citas');
+  }
+
+  dateStrip.addEventListener('click', function (e) {
+    var btn = e.target.closest('.date-card');
+    if (!btn) return;
+    seleccionarFecha(btn.dataset.fecha);
+  });
+
+  selectMedico.addEventListener('change', function () {
+    state.medicoId = Number(selectMedico.value);
+    cargarBloques();
+  });
+
+  bloquesGrid.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-bloque-id]');
+    if (!btn) return;
+    var b = state.bloques.find(function (x) { return x.id === Number(btn.dataset.bloqueId); });
+    if (b) abrirModal(b);
+  });
+
+  $('btnRefresh').addEventListener('click', cargarBloques);
+  $('formAgendar').addEventListener('submit', enviarFormulario);
+  $('btnCerrarModal').addEventListener('click', cerrarModal);
+  $('btnListo').addEventListener('click', cerrarModal);
+
+  modalOverlay.addEventListener('click', function (e) {
+    if (e.target === modalOverlay) cerrarModal();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !modalOverlay.classList.contains('hidden')) cerrarModal();
+    if (e.key === 'Escape' && !$('calFullscreen').classList.contains('hidden')) cerrarCalendarioCompleto();
+  });
+
+  $('tabBtnAgendar').addEventListener('click', function () { cambiarTab('agendar'); });
+  $('tabBtnCitas').addEventListener('click', function () { cambiarTab('citas'); });
+  $('tabBtnCalendario').addEventListener('click', function () { cambiarTab('calendario'); });
+
+  $('calPrev').addEventListener('click', function () { cambiarSemana(-7); });
+  $('calNext').addEventListener('click', function () { cambiarSemana(7); });
+  $('calHoy').addEventListener('click', function () {
+    state.semanaInicio = lunesDe(new Date());
+    renderCalendario();
+  });
+  $('calGrid').addEventListener('click', function (e) {
+    var chip = e.target.closest('[data-cal-idx]');
+    if (chip) mostrarDetalleCita(Number(chip.dataset.calIdx));
+  });
+
+  $('btnCalFull').addEventListener('click', abrirCalendarioCompleto);
+  $('calFullSalir').addEventListener('click', cerrarCalendarioCompleto);
+  $('calSelectMedico').addEventListener('change', function (e) { aplicarFiltroMedicoCalendario(e.target.value); });
+  $('calFullSelectMedico').addEventListener('change', function (e) { aplicarFiltroMedicoCalendario(e.target.value); });
+  $('calFullPrev').addEventListener('click', function () { cambiarSemana(-7); });
+  $('calFullNext').addEventListener('click', function () { cambiarSemana(7); });
+  $('calFullHoy').addEventListener('click', function () {
+    state.semanaInicio = lunesDe(new Date());
+    renderCalendarioFull();
+  });
+  $('calFullGrid').addEventListener('click', function (e) {
+    var chip = e.target.closest('[data-cal-idx]');
+    if (chip) mostrarDetalleCita(Number(chip.dataset.calIdx), $('calFullDetalle'));
+  });
+
+  document.addEventListener('fullscreenchange', function () {
+    if (!document.fullscreenElement && !$('calFullscreen').classList.contains('hidden')) {
+      cerrarCalendarioCompleto();
+    }
+  });
+  document.addEventListener('webkitfullscreenchange', function () {
+    if (!document.webkitFullscreenElement && !$('calFullscreen').classList.contains('hidden')) {
+      cerrarCalendarioCompleto();
+    }
+  });
+
+  $('btnBuscar').addEventListener('click', buscarCitas);
+  $('inputBuscar').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') buscarCitas();
+  });
+
+  $('citasResultados').addEventListener('click', function (e) {
+    var copy = e.target.closest('[data-copiar]');
+    if (copy) { copiar(copy.dataset.copiar); return; }
+    var cancel = e.target.closest('[data-cancelar]');
+    if (cancel) {
+      if (cancel.dataset.armed) {
+        ejecutarCancelacion(cancel);
+      } else {
+        cancel.dataset.armed = '1';
+        cancel.dataset.originalHtml = cancel.innerHTML;
+        cancel.classList.remove('border-red-200', 'bg-white', 'text-red-600', 'hover:bg-red-600', 'hover:text-white');
+        cancel.classList.add('bg-red-600', 'border-red-600', 'text-white', 'hover:bg-red-700', 'hover:text-white');
+        cancel.innerHTML = '¿Confirmar cancelación?';
+        clearTimeout(cancel._timer);
+        cancel._timer = setTimeout(function () { desarmarCancelacion(cancel); }, 4500);
+      }
+    }
+  });
+
+  ['inputNombre', 'inputTelefono', 'inputEmail'].forEach(function (id) {
+    $(id).addEventListener('input', function () { limpiarError({ currentTarget: this }); quitarError('err' + id.charAt(5).toUpperCase() + id.slice(6), id); });
+  });
+
+  $('formLogin').addEventListener('submit', iniciarSesion);
+  $('btnTogglePass').addEventListener('click', function () {
+    var inp = $('loginPassword');
+    var mostrar = inp.type === 'password';
+    inp.type = mostrar ? 'text' : 'password';
+    this.setAttribute('aria-label', mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña');
+  });
+  $('btnLogout').addEventListener('click', cerrarSesion);
+
+  verificarSesion();
+})();
+</script>
+</body>
+</html>
