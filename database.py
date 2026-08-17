@@ -1,7 +1,10 @@
 """Configuración y utilidades de la base de datos SQLite (modo WAL)."""
 
 import sqlite3
+from datetime import date, timedelta
 from pathlib import Path
+
+from auth import hash_password
 
 DB_PATH = Path(__file__).resolve().parent / "agenda.db"
 
@@ -72,3 +75,70 @@ def create_tables() -> None:
     """Crea las tablas si no existen (no destructivo)."""
     with get_connection() as conn:
         conn.executescript(SCHEMA)
+        seed_if_empty(conn)
+
+
+MEDICOS = [
+    ("Dr. Ana Torres", "Medicina General"),
+    ("Dr. Luis Pérez", "Pediatría"),
+    ("Dra. María García", "Ginecología"),
+    ("Dr. Carlos Ruiz", "Cardiología"),
+    ("Dra. Lucía Fernández", "Dermatología"),
+]
+
+USUARIOS = [
+    ("admin", "Administrador", "admin123", "admin", None),
+    ("recepcion", "Recepcionista", "recepcion123", "recepcionista", None),
+    ("medico1", "Dr. Ana Torres", "medico123", "medico", 1),
+    ("medico2", "Dr. Luis Pérez", "medico123", "medico", 2),
+    ("medico3", "Dra. María García", "medico123", "medico", 3),
+    ("medico4", "Dr. Carlos Ruiz", "medico123", "medico", 4),
+    ("medico5", "Dra. Lucía Fernández", "medico123", "medico", 5),
+]
+
+HORA_INICIO = 9       # primer bloque a las 09:00
+HORA_FIN = 17         # último bloque empieza a las 16:00
+DIAS = 5              # días (a partir de hoy) con agenda generada
+
+
+def seed_usuarios(conn: sqlite3.Connection) -> int:
+    cursor = conn.cursor()
+    for usuario, nombre, password, rol, medico_id in USUARIOS:
+        cursor.execute(
+            "INSERT INTO usuarios (usuario, nombre, password_hash, rol, medico_id)"
+            " VALUES (?, ?, ?, ?, ?)",
+            (usuario, nombre, hash_password(password), rol, medico_id),
+        )
+    return len(USUARIOS)
+
+
+def seed_bloques(conn: sqlite3.Connection) -> int:
+    """Genera un bloque de 1 hora por médico por día en el rango horario."""
+    cursor = conn.cursor()
+    hoy = date.today()
+    total = 0
+    for medico_id in range(1, len(MEDICOS) + 1):
+        for delta in range(DIAS):
+            fecha = (hoy + timedelta(days=delta)).isoformat()
+            for h in range(HORA_INICIO, HORA_FIN):
+                cursor.execute(
+                    "INSERT INTO bloques_horarios"
+                    " (medico_id, fecha, hora_inicio, hora_fin, estado)"
+                    " VALUES (?, ?, ?, ?, 'DISPONIBLE')",
+                    (medico_id, fecha, f"{h:02d}:00", f"{h + 1:02d}:00"),
+                )
+                total += 1
+    return total
+
+
+def seed_if_empty(conn: sqlite3.Connection) -> None:
+    """Siembra datos por defecto solo si las tablas estan vacias (no destructivo)."""
+    if conn.execute("SELECT COUNT(*) AS n FROM medicos").fetchone()["n"] == 0:
+        conn.executemany(
+            "INSERT INTO medicos (nombre, especialidad) VALUES (?, ?)", MEDICOS
+        )
+    if conn.execute("SELECT COUNT(*) AS n FROM usuarios").fetchone()["n"] == 0:
+        seed_usuarios(conn)
+    if conn.execute("SELECT COUNT(*) AS n FROM bloques_horarios").fetchone()["n"] == 0:
+        seed_bloques(conn)
+    conn.commit()
