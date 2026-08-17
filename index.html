@@ -282,6 +282,11 @@ tailwind.config = {
       </section>
 
       <div id="expAcciones" class="mt-4 hidden grid gap-4 sm:grid-cols-2">
+        <div class="sm:col-span-2">
+          <label for="expNombre" class="mb-1.5 block text-sm font-medium text-teal-900">Nombre del paciente <span class="text-red-500">*</span></label>
+          <input id="expNombre" type="text" autocomplete="off" placeholder="Ej. Juan Pérez" class="w-full rounded-xl border border-teal-200 bg-white px-4 py-2.5 text-[15px] transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+          <p id="expErrNombre" class="mt-1 hidden text-sm text-red-600"></p>
+        </div>
         <section class="rounded-2xl border border-teal-100 bg-white p-5 shadow-sm">
           <h3 class="font-bold text-teal-900">Generar receta</h3>
           <div class="mt-4 space-y-4">
@@ -1425,6 +1430,8 @@ tailwind.config = {
       expPaciente = { nombre: nombre, rut: rut };
       $('expPacienteNombre').textContent = nombre || 'Paciente sin citas registradas';
       $('expPacienteRut').textContent = rut;
+      $('expNombre').value = nombre;
+      $('expErrNombre').classList.add('hidden');
       $('expPacienteCard').classList.remove('hidden');
       $('expAcciones').classList.remove('hidden');
       $('expListas').classList.remove('hidden');
@@ -1504,6 +1511,14 @@ tailwind.config = {
 
   function generarReceta() {
     if (!expPaciente) return;
+    var nombre = $('expNombre').value.trim();
+    var errNombre = $('expErrNombre');
+    errNombre.classList.add('hidden');
+    if (nombre.length < 2) {
+      errNombre.textContent = 'Ingresa el nombre del paciente (mínimo 2 caracteres).';
+      errNombre.classList.remove('hidden');
+      return;
+    }
     var medicamentos = $('expRecetaMedicamentos').value.trim();
     var err = $('expErrReceta');
     err.classList.add('hidden');
@@ -1520,7 +1535,7 @@ tailwind.config = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        paciente_nombre: expPaciente.nombre,
+        paciente_nombre: nombre,
         paciente_rut: expPaciente.rut,
         paciente_telefono: '',
         medicamentos: medicamentos,
@@ -1541,6 +1556,14 @@ tailwind.config = {
 
   function subirExamen() {
     if (!expPaciente) return;
+    var nombre = $('expNombre').value.trim();
+    var errNombre = $('expErrNombre');
+    errNombre.classList.add('hidden');
+    if (nombre.length < 2) {
+      errNombre.textContent = 'Ingresa el nombre del paciente (mínimo 2 caracteres).';
+      errNombre.classList.remove('hidden');
+      return;
+    }
     var input = $('expExamenArchivo');
     var err = $('expErrExamen');
     err.classList.add('hidden');
@@ -1550,7 +1573,7 @@ tailwind.config = {
       return;
     }
     var fd = new FormData();
-    fd.append('paciente_nombre', expPaciente.nombre);
+    fd.append('paciente_nombre', nombre);
     fd.append('paciente_rut', expPaciente.rut);
     fd.append('paciente_telefono', '');
     fd.append('archivo', input.files[0]);
