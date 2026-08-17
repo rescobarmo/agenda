@@ -8,3 +8,4 @@ agenda.db-shm
 agenda.db-wal
 .env
 start.bat
+uploads/

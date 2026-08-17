@@ -5,3 +5,4 @@ agenda.db
 agenda.db-shm
 agenda.db-wal
 .env
+uploads/

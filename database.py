@@ -53,11 +53,41 @@ CREATE TABLE IF NOT EXISTS sesiones (
     expira_en      TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS recetas (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    cita_id           INTEGER REFERENCES citas(id),
+    paciente_nombre   TEXT NOT NULL,
+    paciente_telefono TEXT NOT NULL,
+    medico_id         INTEGER REFERENCES medicos(id),
+    medicamentos      TEXT NOT NULL,
+    indicaciones      TEXT NOT NULL DEFAULT '',
+    fecha_creacion    TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS examenes (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    cita_id           INTEGER REFERENCES citas(id),
+    paciente_nombre   TEXT NOT NULL,
+    paciente_telefono TEXT NOT NULL,
+    medico_id         INTEGER REFERENCES medicos(id),
+    nombre_archivo    TEXT NOT NULL,
+    ruta_archivo      TEXT NOT NULL,
+    tipo_mime         TEXT NOT NULL,
+    tamano_bytes      INTEGER NOT NULL,
+    fecha_creacion    TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_bloques_medico_fecha
     ON bloques_horarios (medico_id, fecha);
 
 CREATE INDEX IF NOT EXISTS idx_sesiones_token
     ON sesiones (token);
+
+CREATE INDEX IF NOT EXISTS idx_recetas_telefono
+    ON recetas (paciente_telefono);
+
+CREATE INDEX IF NOT EXISTS idx_examenes_telefono
+    ON examenes (paciente_telefono);
 """
 
 

@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, field_validator
@@ -21,15 +21,20 @@ from auth import crear_sesion, eliminar_sesion, validar_sesion, verify_password
 from database import create_tables, get_connection
 
 INDEX_HTML = Path(__file__).resolve().parent / "index.html"
+UPLOAD_DIR = Path(__file__).resolve().parent / "uploads"
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 FECHA_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 HORA_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
+EXT_EXAMENES = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".doc", ".docx", ".xls", ".xlsx", ".zip"}
+MAX_EXAMEN_BYTES = 15 * 1024 * 1024
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     create_tables()
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     yield
 
 
@@ -98,6 +103,38 @@ class BloquearRequest(BaseModel):
 class LoginRequest(BaseModel):
     usuario: str
     password: str
+
+
+class RecetaRequest(BaseModel):
+    cita_id: Optional[int] = None
+    paciente_nombre: str
+    paciente_telefono: str
+    medicamentos: str = Field(min_length=2, max_length=2000)
+    indicaciones: str = Field(default="", max_length=2000)
+
+    @field_validator("paciente_nombre")
+    @classmethod
+    def _nombre(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 2:
+            raise ValueError("El nombre debe tener al menos 2 caracteres.")
+        return v
+
+    @field_validator("paciente_telefono")
+    @classmethod
+    def _telefono(cls, v: str) -> str:
+        v = v.strip()
+        if not v.isdigit() or not (7 <= len(v) <= 15):
+            raise ValueError("El telefono debe contener solo digitos (7 a 15).")
+        return v
+
+    @field_validator("medicamentos")
+    @classmethod
+    def _medicamentos(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 2:
+            raise ValueError("Escriba al menos un medicamento.")
+        return v
 
 
 # ------------------------------------------------------- autenticación
@@ -483,6 +520,213 @@ def bloquear_hora(datos: BloquearRequest, usuario: dict = Depends(get_usuario_ac
         "hora_inicio": datos.hora_inicio,
         "hora_fin": datos.hora_fin,
     }
+
+
+# ---------------------------------------------------------------- recetas
+def es_clinico(usuario: dict) -> bool:
+    """Solo médicos y administradores generan recetas/exámenes."""
+    return usuario["rol"] in ("medico", "admin")
+
+
+@app.post("/api/recetas", status_code=201)
+def crear_receta(datos: RecetaRequest, usuario: dict = Depends(get_usuario_actual)):
+    if not es_clinico(usuario):
+        raise HTTPException(
+            status_code=403, detail="Solo médicos pueden generar recetas."
+        )
+
+    conn = get_connection()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        if datos.cita_id:
+            fila = conn.execute(
+                "SELECT id FROM citas WHERE id = ?", (datos.cita_id,)
+            ).fetchone()
+            if not fila:
+                conn.rollback()
+                raise HTTPException(status_code=404, detail="Cita no encontrada.")
+
+        cur = conn.execute(
+            "INSERT INTO recetas"
+            " (cita_id, paciente_nombre, paciente_telefono, medico_id,"
+            "  medicamentos, indicaciones, fecha_creacion)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                datos.cita_id,
+                datos.paciente_nombre,
+                datos.paciente_telefono,
+                usuario["medico_id"],
+                datos.medicamentos,
+                datos.indicaciones,
+                datetime.now(timezone.utc).isoformat(),
+            ),
+        )
+        receta_id = cur.lastrowid
+        conn.commit()
+    except HTTPException:
+        raise
+    except sqlite3.Error as exc:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error de base de datos: {exc}")
+    finally:
+        conn.close()
+
+    return {
+        "mensaje": "Receta generada correctamente.",
+        "receta_id": receta_id,
+        "paciente": datos.paciente_nombre,
+    }
+
+
+@app.get("/api/recetas")
+def listar_recetas(
+    telefono: str = Query(..., description="Telefono del paciente"),
+    usuario: dict = Depends(get_usuario_actual),
+):
+    telefono = telefono.strip()
+    if not telefono.isdigit() or not (7 <= len(telefono) <= 15):
+        raise HTTPException(
+            status_code=400, detail="Telefono invalido (7 a 15 digitos)."
+        )
+    conn = get_connection()
+    try:
+        filas = conn.execute(
+            "SELECT r.id AS receta_id, r.paciente_nombre, r.paciente_telefono,"
+            "       r.medicamentos, r.indicaciones, r.fecha_creacion,"
+            "       m.nombre AS medico"
+            " FROM recetas r LEFT JOIN medicos m ON m.id = r.medico_id"
+            " WHERE r.paciente_telefono = ?"
+            " ORDER BY r.fecha_creacion DESC",
+            (telefono,),
+        ).fetchall()
+    finally:
+        conn.close()
+    return {"recetas": [dict(f) for f in filas], "total": len(filas)}
+
+
+# ---------------------------------------------------------------- examenes
+@app.post("/api/examenes", status_code=201)
+async def subir_examen(
+    archivo: UploadFile = File(...),
+    paciente_nombre: str = Form(...),
+    paciente_telefono: str = Form(...),
+    cita_id: Optional[int] = Form(None),
+    usuario: dict = Depends(get_usuario_actual),
+):
+    if not es_clinico(usuario):
+        raise HTTPException(
+            status_code=403, detail="Solo médicos pueden subir exámenes."
+        )
+
+    nombre = (paciente_nombre or "").strip()
+    telefono = (paciente_telefono or "").strip()
+    if len(nombre) < 2:
+        raise HTTPException(status_code=400, detail="Nombre del paciente invalido.")
+    if not telefono.isdigit() or not (7 <= len(telefono) <= 15):
+        raise HTTPException(
+            status_code=400, detail="Telefono invalido (7 a 15 digitos)."
+        )
+
+    nombre_original = archivo.filename or "archivo"
+    ext = Path(nombre_original).suffix.lower()
+    if ext not in EXT_EXAMENES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tipo de archivo no permitido ({ext}). Use: "
+                   + ", ".join(sorted(EXT_EXAMENES)),
+        )
+    contenido = await archivo.read()
+    if len(contenido) == 0:
+        raise HTTPException(status_code=400, detail="El archivo esta vacio.")
+    if len(contenido) > MAX_EXAMEN_BYTES:
+        raise HTTPException(
+            status_code=400, detail="El archivo supera el maximo de 15 MB."
+        )
+
+    nombre_guardado = f"{uuid.uuid4().hex}{ext}"
+    ruta = UPLOAD_DIR / nombre_guardado
+    ruta.write_bytes(contenido)
+
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            "INSERT INTO examenes"
+            " (cita_id, paciente_nombre, paciente_telefono, medico_id,"
+            "  nombre_archivo, ruta_archivo, tipo_mime, tamano_bytes, fecha_creacion)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                cita_id,
+                nombre,
+                telefono,
+                usuario["medico_id"],
+                Path(nombre_original).name,
+                str(ruta),
+                archivo.content_type or "application/octet-stream",
+                len(contenido),
+                datetime.now(timezone.utc).isoformat(),
+            ),
+        )
+        examen_id = cur.lastrowid
+        conn.commit()
+    except sqlite3.Error as exc:
+        ruta.unlink(missing_ok=True)
+        raise HTTPException(status_code=500, detail=f"Error de base de datos: {exc}")
+    finally:
+        conn.close()
+
+    return {
+        "mensaje": "Examen subido correctamente.",
+        "examen_id": examen_id,
+        "nombre_archivo": Path(nombre_original).name,
+    }
+
+
+@app.get("/api/examenes")
+def listar_examenes(
+    telefono: str = Query(..., description="Telefono del paciente"),
+    usuario: dict = Depends(get_usuario_actual),
+):
+    telefono = telefono.strip()
+    if not telefono.isdigit() or not (7 <= len(telefono) <= 15):
+        raise HTTPException(
+            status_code=400, detail="Telefono invalido (7 a 15 digitos)."
+        )
+    conn = get_connection()
+    try:
+        filas = conn.execute(
+            "SELECT e.id AS examen_id, e.paciente_nombre, e.paciente_telefono,"
+            "       e.nombre_archivo, e.tipo_mime, e.tamano_bytes,"
+            "       e.fecha_creacion, m.nombre AS medico"
+            " FROM examenes e LEFT JOIN medicos m ON m.id = e.medico_id"
+            " WHERE e.paciente_telefono = ?"
+            " ORDER BY e.fecha_creacion DESC",
+            (telefono,),
+        ).fetchall()
+    finally:
+        conn.close()
+    return {"examenes": [dict(f) for f in filas], "total": len(filas)}
+
+
+@app.get("/api/examenes/{examen_id}/descargar")
+def descargar_examen(examen_id: int, usuario: dict = Depends(get_usuario_actual)):
+    conn = get_connection()
+    try:
+        fila = conn.execute(
+            "SELECT nombre_archivo, ruta_archivo FROM examenes WHERE id = ?",
+            (examen_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+    if not fila:
+        raise HTTPException(status_code=404, detail="Examen no encontrado.")
+    ruta = Path(fila["ruta_archivo"])
+    if not ruta.exists():
+        raise HTTPException(status_code=404, detail="Archivo no disponible en disco.")
+    return FileResponse(
+        ruta,
+        media_type="application/octet-stream",
+        filename=fila["nombre_archivo"],
+    )
 
 
 if __name__ == "__main__":
