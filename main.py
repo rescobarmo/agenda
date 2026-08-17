@@ -483,3 +483,12 @@ def bloquear_hora(datos: BloquearRequest, usuario: dict = Depends(get_usuario_ac
         "hora_inicio": datos.hora_inicio,
         "hora_fin": datos.hora_fin,
     }
+
+
+if __name__ == "__main__":
+    import os
+
+    import uvicorn
+
+    puerto = int(os.environ.get("PORT", "8000"))
+    uvicorn.run("main:app", host="0.0.0.0", port=puerto)
