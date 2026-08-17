@@ -27,6 +27,27 @@ EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 FECHA_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 HORA_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
+
+def normalizar_rut(rut: str) -> str:
+    """Valida un RUT chileno y lo devuelve normalizado como '12345678-9'."""
+    v = (rut or "").strip().upper().replace(".", "").replace(" ", "")
+    m = re.match(r"^(\d{1,8})([0-9K])$", v.replace("-", ""))
+    if not m:
+        raise ValueError("RUT invalido. Formato esperado: 12.345.678-9.")
+    cuerpo, dv = m.group(1), m.group(2)
+    total = 0
+    for i, d in enumerate(reversed(cuerpo)):
+        total += int(d) * (2 + (i % 6))
+    resto = total % 11
+    if resto == 0:
+        esperado = "0"
+    else:
+        resto2 = 11 - resto
+        esperado = "K" if resto2 == 10 else str(resto2)
+    if dv != esperado:
+        raise ValueError("Digito verificador del RUT invalido.")
+    return f"{cuerpo}-{dv}"
+
 EXT_EXAMENES = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".doc", ".docx", ".xls", ".xlsx", ".zip"}
 MAX_EXAMEN_BYTES = 15 * 1024 * 1024
 
@@ -59,6 +80,7 @@ app.add_middleware(
 class AgendarRequest(BaseModel):
     bloque_id: int
     paciente_nombre: str = Field(min_length=2, max_length=120)
+    paciente_rut: str
     paciente_telefono: str
     paciente_email: str = ""
 
@@ -69,6 +91,14 @@ class AgendarRequest(BaseModel):
         if len(v) < 2:
             raise ValueError("El nombre debe tener al menos 2 caracteres.")
         return v
+
+    @field_validator("paciente_rut")
+    @classmethod
+    def _rut(cls, v: str) -> str:
+        try:
+            return normalizar_rut(v)
+        except ValueError as exc:
+            raise ValueError(str(exc))
 
     @field_validator("paciente_telefono")
     @classmethod
@@ -108,7 +138,8 @@ class LoginRequest(BaseModel):
 class RecetaRequest(BaseModel):
     cita_id: Optional[int] = None
     paciente_nombre: str
-    paciente_telefono: str
+    paciente_rut: str
+    paciente_telefono: str = ""
     medicamentos: str = Field(min_length=2, max_length=2000)
     indicaciones: str = Field(default="", max_length=2000)
 
@@ -120,11 +151,19 @@ class RecetaRequest(BaseModel):
             raise ValueError("El nombre debe tener al menos 2 caracteres.")
         return v
 
+    @field_validator("paciente_rut")
+    @classmethod
+    def _rut(cls, v: str) -> str:
+        try:
+            return normalizar_rut(v)
+        except ValueError as exc:
+            raise ValueError(str(exc))
+
     @field_validator("paciente_telefono")
     @classmethod
     def _telefono(cls, v: str) -> str:
-        v = v.strip()
-        if not v.isdigit() or not (7 <= len(v) <= 15):
+        v = (v or "").strip()
+        if v and (not v.isdigit() or not (7 <= len(v) <= 15)):
             raise ValueError("El telefono debe contener solo digitos (7 a 15).")
         return v
 
@@ -232,6 +271,7 @@ def raiz():
 def consultar_citas(
     id_cancelacion: Optional[str] = Query(None, description="Codigo unico de cancelacion"),
     telefono: Optional[str] = Query(None, description="Telefono del paciente"),
+    rut: Optional[str] = Query(None, description="RUT del paciente (12345678-9)"),
     medico_id: Optional[int] = Query(None, description="Filtrar por medico"),
     fecha_inicio: Optional[str] = Query(None, description="Inicio del rango (YYYY-MM-DD)"),
     fecha_fin: Optional[str] = Query(None, description="Fin del rango (YYYY-MM-DD)"),
@@ -239,17 +279,22 @@ def consultar_citas(
 ):
     """Consulta citas.
 
-    - Por paciente: 'id_cancelacion' o 'telefono'.
+    - Por paciente: 'id_cancelacion', 'telefono' o 'rut'.
     - Por agenda (vista de calendario): 'medico_id' (opcional) y/o rango
       'fecha_inicio'/'fecha_fin'.
     """
-    es_busqueda_paciente = bool(id_cancelacion or telefono)
+    es_busqueda_paciente = bool(id_cancelacion or telefono or rut)
     es_agenda = bool(medico_id or fecha_inicio or fecha_fin)
     if not es_busqueda_paciente and not es_agenda:
         raise HTTPException(
             status_code=400,
-            detail="Debe enviar 'id_cancelacion' o 'telefono', o un rango de fechas.",
+            detail="Debe enviar 'id_cancelacion', 'telefono' o 'rut', o un rango de fechas.",
         )
+    if rut is not None:
+        try:
+            rut = normalizar_rut(rut)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
     for f in (fecha_inicio, fecha_fin):
         if f is not None and not FECHA_RE.match(f):
             raise HTTPException(
@@ -264,9 +309,9 @@ def consultar_citas(
     try:
         sql = (
             "SELECT c.id AS cita_id, c.bloque_id, c.paciente_nombre,"
-            "       c.paciente_telefono, c.paciente_email, c.id_cancelacion,"
-            "       c.fecha_creacion, b.medico_id, b.fecha, b.hora_inicio,"
-            "       b.hora_fin, m.nombre AS medico, m.especialidad"
+            "       c.paciente_rut, c.paciente_telefono, c.paciente_email,"
+            "       c.id_cancelacion, c.fecha_creacion, b.medico_id, b.fecha,"
+            "       b.hora_inicio, b.hora_fin, m.nombre AS medico, m.especialidad"
             " FROM citas c"
             " JOIN bloques_horarios b ON b.id = c.bloque_id"
             " JOIN medicos m ON m.id = b.medico_id"
@@ -277,11 +322,17 @@ def consultar_citas(
                     sql + " WHERE c.id_cancelacion = ?",
                     (id_cancelacion,),
                 ).fetchall()
-            else:
+            elif telefono:
                 filas = conn.execute(
                     sql + " WHERE c.paciente_telefono = ?"
                     " ORDER BY b.fecha, b.hora_inicio",
                     (telefono.strip(),),
+                ).fetchall()
+            else:
+                filas = conn.execute(
+                    sql + " WHERE c.paciente_rut = ?"
+                    " ORDER BY b.fecha, b.hora_inicio",
+                    (rut,),
                 ).fetchall()
         else:
             condiciones = []
@@ -388,12 +439,13 @@ def agendar(datos: AgendarRequest, usuario: dict = Depends(get_usuario_actual)):
         id_cancelacion = uuid.uuid4().hex
         cur = conn.execute(
             "INSERT INTO citas"
-            " (bloque_id, paciente_nombre, paciente_telefono, paciente_email,"
-            "  id_cancelacion, fecha_creacion)"
-            " VALUES (?, ?, ?, ?, ?, ?)",
+            " (bloque_id, paciente_nombre, paciente_rut, paciente_telefono,"
+            "  paciente_email, id_cancelacion, fecha_creacion)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
                 datos.bloque_id,
                 datos.paciente_nombre,
+                datos.paciente_rut,
                 datos.paciente_telefono,
                 datos.paciente_email,
                 id_cancelacion,
@@ -548,12 +600,13 @@ def crear_receta(datos: RecetaRequest, usuario: dict = Depends(get_usuario_actua
 
         cur = conn.execute(
             "INSERT INTO recetas"
-            " (cita_id, paciente_nombre, paciente_telefono, medico_id,"
-            "  medicamentos, indicaciones, fecha_creacion)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?)",
+            " (cita_id, paciente_nombre, paciente_rut, paciente_telefono,"
+            "  medico_id, medicamentos, indicaciones, fecha_creacion)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 datos.cita_id,
                 datos.paciente_nombre,
+                datos.paciente_rut,
                 datos.paciente_telefono,
                 usuario["medico_id"],
                 datos.medicamentos,
@@ -580,24 +633,23 @@ def crear_receta(datos: RecetaRequest, usuario: dict = Depends(get_usuario_actua
 
 @app.get("/api/recetas")
 def listar_recetas(
-    telefono: str = Query(..., description="Telefono del paciente"),
+    rut: str = Query(..., description="RUT del paciente"),
     usuario: dict = Depends(get_usuario_actual),
 ):
-    telefono = telefono.strip()
-    if not telefono.isdigit() or not (7 <= len(telefono) <= 15):
-        raise HTTPException(
-            status_code=400, detail="Telefono invalido (7 a 15 digitos)."
-        )
+    try:
+        rut = normalizar_rut(rut)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     conn = get_connection()
     try:
         filas = conn.execute(
-            "SELECT r.id AS receta_id, r.paciente_nombre, r.paciente_telefono,"
-            "       r.medicamentos, r.indicaciones, r.fecha_creacion,"
-            "       m.nombre AS medico"
+            "SELECT r.id AS receta_id, r.paciente_nombre, r.paciente_rut,"
+            "       r.paciente_telefono, r.medicamentos, r.indicaciones,"
+            "       r.fecha_creacion, m.nombre AS medico"
             " FROM recetas r LEFT JOIN medicos m ON m.id = r.medico_id"
-            " WHERE r.paciente_telefono = ?"
+            " WHERE r.paciente_rut = ?"
             " ORDER BY r.fecha_creacion DESC",
-            (telefono,),
+            (rut,),
         ).fetchall()
     finally:
         conn.close()
@@ -609,7 +661,8 @@ def listar_recetas(
 async def subir_examen(
     archivo: UploadFile = File(...),
     paciente_nombre: str = Form(...),
-    paciente_telefono: str = Form(...),
+    paciente_rut: str = Form(...),
+    paciente_telefono: str = Form(""),
     cita_id: Optional[int] = Form(None),
     usuario: dict = Depends(get_usuario_actual),
 ):
@@ -622,7 +675,11 @@ async def subir_examen(
     telefono = (paciente_telefono or "").strip()
     if len(nombre) < 2:
         raise HTTPException(status_code=400, detail="Nombre del paciente invalido.")
-    if not telefono.isdigit() or not (7 <= len(telefono) <= 15):
+    try:
+        rut = normalizar_rut(paciente_rut)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    if telefono and (not telefono.isdigit() or not (7 <= len(telefono) <= 15)):
         raise HTTPException(
             status_code=400, detail="Telefono invalido (7 a 15 digitos)."
         )
@@ -651,12 +708,13 @@ async def subir_examen(
     try:
         cur = conn.execute(
             "INSERT INTO examenes"
-            " (cita_id, paciente_nombre, paciente_telefono, medico_id,"
+            " (cita_id, paciente_nombre, paciente_rut, paciente_telefono, medico_id,"
             "  nombre_archivo, ruta_archivo, tipo_mime, tamano_bytes, fecha_creacion)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 cita_id,
                 nombre,
+                rut,
                 telefono,
                 usuario["medico_id"],
                 Path(nombre_original).name,
@@ -683,24 +741,23 @@ async def subir_examen(
 
 @app.get("/api/examenes")
 def listar_examenes(
-    telefono: str = Query(..., description="Telefono del paciente"),
+    rut: str = Query(..., description="RUT del paciente"),
     usuario: dict = Depends(get_usuario_actual),
 ):
-    telefono = telefono.strip()
-    if not telefono.isdigit() or not (7 <= len(telefono) <= 15):
-        raise HTTPException(
-            status_code=400, detail="Telefono invalido (7 a 15 digitos)."
-        )
+    try:
+        rut = normalizar_rut(rut)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     conn = get_connection()
     try:
         filas = conn.execute(
-            "SELECT e.id AS examen_id, e.paciente_nombre, e.paciente_telefono,"
-            "       e.nombre_archivo, e.tipo_mime, e.tamano_bytes,"
-            "       e.fecha_creacion, m.nombre AS medico"
+            "SELECT e.id AS examen_id, e.paciente_nombre, e.paciente_rut,"
+            "       e.paciente_telefono, e.nombre_archivo, e.tipo_mime,"
+            "       e.tamano_bytes, e.fecha_creacion, m.nombre AS medico"
             " FROM examenes e LEFT JOIN medicos m ON m.id = e.medico_id"
-            " WHERE e.paciente_telefono = ?"
+            " WHERE e.paciente_rut = ?"
             " ORDER BY e.fecha_creacion DESC",
-            (telefono,),
+            (rut,),
         ).fetchall()
     finally:
         conn.close()

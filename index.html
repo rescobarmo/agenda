@@ -251,11 +251,11 @@ tailwind.config = {
     <main id="tabExpediente" class="hidden" role="tabpanel" aria-labelledby="tabBtnExpediente">
 
       <section class="rounded-2xl border border-teal-100 bg-white p-5 shadow-sm">
-        <label for="expTelefono" class="mb-2 block text-xs font-semibold uppercase tracking-wide text-teal-800/60">
-          Teléfono del paciente
+        <label for="expRut" class="mb-2 block text-xs font-semibold uppercase tracking-wide text-teal-800/60">
+          RUT del paciente
         </label>
         <div class="flex gap-2">
-          <input id="expTelefono" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Ej. 3123456789"
+          <input id="expRut" type="text" inputmode="numeric" autocomplete="off" placeholder="Ej. 12.345.678-9"
                  class="w-full rounded-xl border border-teal-200 bg-white px-4 py-3 text-[15px] transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
           <button id="expBuscar" type="button"
                   class="inline-flex shrink-0 items-center gap-2 rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70">
@@ -273,7 +273,7 @@ tailwind.config = {
           </div>
           <div>
             <div id="expPacienteNombre" class="font-bold text-teal-900">—</div>
-            <div id="expPacienteTelefono" class="text-sm text-teal-800/60">—</div>
+            <div id="expPacienteRut" class="text-sm text-teal-800/60">—</div>
           </div>
         </div>
       </section>
@@ -394,6 +394,11 @@ tailwind.config = {
             <label for="inputNombre" class="mb-1.5 block text-sm font-medium text-teal-900">Nombre completo <span class="text-red-500">*</span></label>
             <input id="inputNombre" type="text" autocomplete="name" placeholder="Ej. Juan Pérez" class="w-full rounded-xl border border-teal-200 bg-white px-4 py-2.5 text-[15px] transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
             <p id="errNombre" class="mt-1 hidden text-sm text-red-600"></p>
+          </div>
+          <div>
+            <label for="inputRut" class="mb-1.5 block text-sm font-medium text-teal-900">RUT <span class="text-red-500">*</span></label>
+            <input id="inputRut" type="text" autocomplete="off" inputmode="numeric" placeholder="Ej. 12.345.678-9" class="w-full rounded-xl border border-teal-200 bg-white px-4 py-2.5 text-[15px] transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+            <p id="errRut" class="mt-1 hidden text-sm text-red-600"></p>
           </div>
           <div>
             <label for="inputTelefono" class="mb-1.5 block text-sm font-medium text-teal-900">Teléfono de contacto <span class="text-red-500">*</span></label>
@@ -785,6 +790,7 @@ tailwind.config = {
     $('modalTitulo').textContent = 'Agendar cita · ' + bloque.hora_inicio + ' a ' + bloque.hora_fin;
     $('formAgendar').reset();
     quitarError('errNombre', 'inputNombre');
+    quitarError('errRut', 'inputRut');
     quitarError('errTelefono', 'inputTelefono');
     quitarError('errEmail', 'inputEmail');
     $('modalFormView').classList.remove('hidden');
@@ -802,10 +808,32 @@ tailwind.config = {
   function validarTelefono(t) { return /^\d{7,15}$/.test(t); }
   function validarEmail(e) { return !e || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e); }
 
+  function normalizarRut(rut) {
+    var s = String(rut || '').trim().replace(/\./g, '').replace(/\s/g, '');
+    var m = s.replace('-', '').match(/^(\d{1,8})([0-9kK])$/);
+    return m ? m[1] + '-' + m[2].toUpperCase() : '';
+  }
+
+  function validarRut(rut) {
+    var s = String(rut || '').trim().replace(/\./g, '').replace(/\s/g, '');
+    var m = s.replace('-', '').match(/^(\d{1,8})([0-9kK])$/);
+    if (!m) return false;
+    var cuerpo = m[1], dv = m[2].toUpperCase();
+    var suma = 0, mul = 2;
+    for (var i = cuerpo.length - 1; i >= 0; i--) {
+      suma += parseInt(cuerpo.charAt(i), 10) * mul;
+      mul = mul === 7 ? 2 : mul + 1;
+    }
+    var resto = suma % 11;
+    var esp = resto === 0 ? '0' : (11 - resto === 10 ? 'K' : String(11 - resto));
+    return dv === esp;
+  }
+
   function enviarFormulario(ev) {
     ev.preventDefault();
     var ok = true;
     var nombre = $('inputNombre').value.trim();
+    var rut = $('inputRut').value.trim();
     var tel = $('inputTelefono').value.trim();
     var email = $('inputEmail').value.trim();
 
@@ -813,6 +841,11 @@ tailwind.config = {
       marcarError('inputNombre', 'errNombre', 'Ingresa tu nombre completo.');
       ok = false;
     } else { quitarError('errNombre', 'inputNombre'); }
+
+    if (!validarRut(rut)) {
+      marcarError('inputRut', 'errRut', 'Ingresa un RUT válido, Ej. 12.345.678-9.');
+      ok = false;
+    } else { quitarError('errRut', 'inputRut'); }
 
     if (!validarTelefono(tel)) {
       marcarError('inputTelefono', 'errTelefono', 'Ingresa un teléfono válido (7 a 15 dígitos).');
@@ -836,6 +869,7 @@ tailwind.config = {
       body: JSON.stringify({
         bloque_id: state.bloqueSeleccionado.id,
         paciente_nombre: nombre,
+        paciente_rut: normalizarRut(rut),
         paciente_telefono: tel,
         paciente_email: email,
       }),
@@ -1226,32 +1260,33 @@ tailwind.config = {
   }
 
   function buscarExpediente() {
-    var telefono = $('expTelefono').value.trim();
+    var rut = $('expRut').value.trim();
     var e = $('expError');
     e.classList.add('hidden');
-    if (!/^\d{7,15}$/.test(telefono)) {
-      mostrarExpError('Ingresa un teléfono de 7 a 15 dígitos.');
+    if (!validarRut(rut)) {
+      mostrarExpError('Ingresa un RUT válido, Ej. 12.345.678-9.');
       return;
     }
+    rut = normalizarRut(rut);
     var btn = $('expBuscar');
     btn.disabled = true;
     var original = btn.innerHTML;
     btn.innerHTML = spinnerSvg('') + '<span>Buscando…</span>';
 
-    api('/api/citas?telefono=' + encodeURIComponent(telefono)).then(function (data) {
+    api('/api/citas?rut=' + encodeURIComponent(rut)).then(function (data) {
       var citas = data.citas || [];
       var nombre = citas.length ? citas[0].paciente_nombre : '';
-      expPaciente = { nombre: nombre, telefono: telefono };
+      expPaciente = { nombre: nombre, rut: rut };
       $('expPacienteNombre').textContent = nombre || 'Paciente sin citas registradas';
-      $('expPacienteTelefono').textContent = telefono;
+      $('expPacienteRut').textContent = rut;
       $('expPacienteCard').classList.remove('hidden');
       $('expAcciones').classList.remove('hidden');
       $('expListas').classList.remove('hidden');
       $('expRecetaMedicamentos').value = '';
       $('expRecetaIndicaciones').value = '';
       $('expExamenArchivo').value = '';
-      cargarRecetas(telefono);
-      cargarExamenes(telefono);
+      cargarRecetas(rut);
+      cargarExamenes(rut);
     }).catch(function (err) {
       toast(err.message, 'error');
     }).finally(function () {
@@ -1260,10 +1295,10 @@ tailwind.config = {
     });
   }
 
-  function cargarRecetas(telefono) {
+  function cargarRecetas(rut) {
     var cont = $('expRecetasLista');
     cont.innerHTML = '<div class="flex items-center gap-2 text-sm text-teal-800/60">' + spinnerSvg('text-cyan-600') + 'Cargando…</div>';
-    api('/api/recetas?telefono=' + encodeURIComponent(telefono)).then(function (data) {
+    api('/api/recetas?rut=' + encodeURIComponent(rut)).then(function (data) {
       renderRecetas(data.recetas || []);
     }).catch(function (err) {
       cont.innerHTML = '<p class="text-sm text-red-600">' + err.message + '</p>';
@@ -1289,10 +1324,10 @@ tailwind.config = {
     }).join('');
   }
 
-  function cargarExamenes(telefono) {
+  function cargarExamenes(rut) {
     var cont = $('expExamenesLista');
     cont.innerHTML = '<div class="flex items-center gap-2 text-sm text-teal-800/60">' + spinnerSvg('text-cyan-600') + 'Cargando…</div>';
-    api('/api/examenes?telefono=' + encodeURIComponent(telefono)).then(function (data) {
+    api('/api/examenes?rut=' + encodeURIComponent(rut)).then(function (data) {
       renderExamenes(data.examenes || []);
     }).catch(function (err) {
       cont.innerHTML = '<p class="text-sm text-red-600">' + err.message + '</p>';
@@ -1340,7 +1375,8 @@ tailwind.config = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         paciente_nombre: expPaciente.nombre,
-        paciente_telefono: expPaciente.telefono,
+        paciente_rut: expPaciente.rut,
+        paciente_telefono: '',
         medicamentos: medicamentos,
         indicaciones: $('expRecetaIndicaciones').value.trim(),
       }),
@@ -1348,7 +1384,7 @@ tailwind.config = {
       $('expRecetaMedicamentos').value = '';
       $('expRecetaIndicaciones').value = '';
       toast('Receta generada correctamente.', 'success');
-      cargarRecetas(expPaciente.telefono);
+      cargarRecetas(expPaciente.rut);
     }).catch(function (e) {
       toast(e.message, 'error');
     }).finally(function () {
@@ -1369,7 +1405,8 @@ tailwind.config = {
     }
     var fd = new FormData();
     fd.append('paciente_nombre', expPaciente.nombre);
-    fd.append('paciente_telefono', expPaciente.telefono);
+    fd.append('paciente_rut', expPaciente.rut);
+    fd.append('paciente_telefono', '');
     fd.append('archivo', input.files[0]);
     var btn = $('expSubirExamen');
     btn.disabled = true;
@@ -1378,7 +1415,7 @@ tailwind.config = {
     api('/api/examenes', { method: 'POST', body: fd }).then(function () {
       input.value = '';
       toast('Examen subido correctamente.', 'success');
-      cargarExamenes(expPaciente.telefono);
+      cargarExamenes(expPaciente.rut);
     }).catch(function (e) {
       toast(e.message, 'error');
     }).finally(function () {
@@ -1466,7 +1503,7 @@ tailwind.config = {
   $('tabBtnExpediente').addEventListener('click', function () { cambiarTab('expediente'); });
 
   $('expBuscar').addEventListener('click', buscarExpediente);
-  $('expTelefono').addEventListener('keydown', function (e) { if (e.key === 'Enter') buscarExpediente(); });
+  $('expRut').addEventListener('keydown', function (e) { if (e.key === 'Enter') buscarExpediente(); });
   $('expGenerarReceta').addEventListener('click', generarReceta);
   $('expSubirExamen').addEventListener('click', subirExamen);
   $('expExamenesLista').addEventListener('click', function (e) {
@@ -1535,7 +1572,7 @@ tailwind.config = {
     }
   });
 
-  ['inputNombre', 'inputTelefono', 'inputEmail'].forEach(function (id) {
+  ['inputNombre', 'inputRut', 'inputTelefono', 'inputEmail'].forEach(function (id) {
     $(id).addEventListener('input', function () { limpiarError({ currentTarget: this }); quitarError('err' + id.charAt(5).toUpperCase() + id.slice(6), id); });
   });
 

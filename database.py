@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS citas (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
     bloque_id         INTEGER NOT NULL UNIQUE REFERENCES bloques_horarios(id),
     paciente_nombre   TEXT NOT NULL,
+    paciente_rut      TEXT NOT NULL DEFAULT '',
     paciente_telefono TEXT NOT NULL,
     paciente_email    TEXT,
     id_cancelacion    TEXT NOT NULL UNIQUE,
@@ -57,6 +58,7 @@ CREATE TABLE IF NOT EXISTS recetas (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
     cita_id           INTEGER REFERENCES citas(id),
     paciente_nombre   TEXT NOT NULL,
+    paciente_rut      TEXT NOT NULL DEFAULT '',
     paciente_telefono TEXT NOT NULL,
     medico_id         INTEGER REFERENCES medicos(id),
     medicamentos      TEXT NOT NULL,
@@ -68,6 +70,7 @@ CREATE TABLE IF NOT EXISTS examenes (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
     cita_id           INTEGER REFERENCES citas(id),
     paciente_nombre   TEXT NOT NULL,
+    paciente_rut      TEXT NOT NULL DEFAULT '',
     paciente_telefono TEXT NOT NULL,
     medico_id         INTEGER REFERENCES medicos(id),
     nombre_archivo    TEXT NOT NULL,
@@ -82,12 +85,24 @@ CREATE INDEX IF NOT EXISTS idx_bloques_medico_fecha
 
 CREATE INDEX IF NOT EXISTS idx_sesiones_token
     ON sesiones (token);
+"""
 
+
+SCHEMA_INDICES = """
 CREATE INDEX IF NOT EXISTS idx_recetas_telefono
     ON recetas (paciente_telefono);
 
 CREATE INDEX IF NOT EXISTS idx_examenes_telefono
     ON examenes (paciente_telefono);
+
+CREATE INDEX IF NOT EXISTS idx_citas_rut
+    ON citas (paciente_rut);
+
+CREATE INDEX IF NOT EXISTS idx_recetas_rut
+    ON recetas (paciente_rut);
+
+CREATE INDEX IF NOT EXISTS idx_examenes_rut
+    ON examenes (paciente_rut);
 """
 
 
@@ -101,10 +116,26 @@ def get_connection() -> sqlite3.Connection:
     return conn
 
 
+def _migrate_rut(conn: sqlite3.Connection) -> None:
+    """Agrega la columna paciente_rut a tablas existentes (no destructivo)."""
+    for tabla in ("citas", "recetas", "examenes"):
+        cols = {
+            fila["name"]
+            for fila in conn.execute(f"PRAGMA table_info({tabla})").fetchall()
+        }
+        if "paciente_rut" not in cols:
+            conn.execute(
+                f"ALTER TABLE {tabla}"
+                " ADD COLUMN paciente_rut TEXT NOT NULL DEFAULT ''"
+            )
+
+
 def create_tables() -> None:
     """Crea las tablas si no existen (no destructivo)."""
     with get_connection() as conn:
         conn.executescript(SCHEMA)
+        _migrate_rut(conn)
+        conn.executescript(SCHEMA_INDICES)
         seed_if_empty(conn)
 
 
