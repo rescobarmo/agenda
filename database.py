@@ -80,6 +80,44 @@ CREATE TABLE IF NOT EXISTS examenes (
     fecha_creacion    TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS fichas_clinicas (
+    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+    paciente_rut            TEXT NOT NULL UNIQUE,
+    paciente_nombre         TEXT NOT NULL,
+    paciente_telefono       TEXT NOT NULL DEFAULT '',
+    paciente_email          TEXT NOT NULL DEFAULT '',
+    fecha_nacimiento        TEXT NOT NULL DEFAULT '',
+    direccion               TEXT NOT NULL DEFAULT '',
+    alergias                TEXT NOT NULL DEFAULT '',
+    enfermedades_cronicas   TEXT NOT NULL DEFAULT '',
+    medicamentos_habituales TEXT NOT NULL DEFAULT '',
+    fecha_creacion          TEXT NOT NULL,
+    fecha_actualizacion     TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS signos_vitales (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    ficha_id      INTEGER NOT NULL REFERENCES fichas_clinicas(id),
+    cita_id       INTEGER REFERENCES citas(id),
+    medico_id     INTEGER REFERENCES medicos(id),
+    peso_kg       REAL,
+    talla_cm      REAL,
+    presion       TEXT NOT NULL DEFAULT '',
+    temperatura   REAL,
+    observaciones TEXT NOT NULL DEFAULT '',
+    fecha_creacion TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS notas_clinicas (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    ficha_id      INTEGER NOT NULL REFERENCES fichas_clinicas(id),
+    cita_id       INTEGER REFERENCES citas(id),
+    medico_id     INTEGER REFERENCES medicos(id),
+    diagnostico   TEXT NOT NULL DEFAULT '',
+    notas         TEXT NOT NULL DEFAULT '',
+    fecha_creacion TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_bloques_medico_fecha
     ON bloques_horarios (medico_id, fecha);
 
@@ -103,6 +141,12 @@ CREATE INDEX IF NOT EXISTS idx_recetas_rut
 
 CREATE INDEX IF NOT EXISTS idx_examenes_rut
     ON examenes (paciente_rut);
+
+CREATE INDEX IF NOT EXISTS idx_signos_ficha
+    ON signos_vitales (ficha_id);
+
+CREATE INDEX IF NOT EXISTS idx_notas_ficha
+    ON notas_clinicas (ficha_id);
 """
 
 

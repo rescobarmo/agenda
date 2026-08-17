@@ -176,6 +176,83 @@ class RecetaRequest(BaseModel):
         return v
 
 
+class FichaClinicaRequest(BaseModel):
+    paciente_rut: str
+    paciente_nombre: str = Field(min_length=2, max_length=120)
+    paciente_telefono: str = ""
+    paciente_email: str = ""
+    fecha_nacimiento: str = ""
+    direccion: str = Field(default="", max_length=300)
+    alergias: str = Field(default="", max_length=1000)
+    enfermedades_cronicas: str = Field(default="", max_length=1000)
+    medicamentos_habituales: str = Field(default="", max_length=1000)
+
+    @field_validator("paciente_rut")
+    @classmethod
+    def _rut(cls, v: str) -> str:
+        try:
+            return normalizar_rut(v)
+        except ValueError as exc:
+            raise ValueError(str(exc))
+
+    @field_validator("paciente_nombre")
+    @classmethod
+    def _nombre(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 2:
+            raise ValueError("El nombre debe tener al menos 2 caracteres.")
+        return v
+
+    @field_validator("paciente_telefono")
+    @classmethod
+    def _telefono(cls, v: str) -> str:
+        v = (v or "").strip()
+        if v and (not v.isdigit() or not (7 <= len(v) <= 15)):
+            raise ValueError("El telefono debe contener solo digitos (7 a 15).")
+        return v
+
+    @field_validator("paciente_email")
+    @classmethod
+    def _email(cls, v: str) -> str:
+        v = (v or "").strip()
+        if v and not EMAIL_RE.match(v):
+            raise ValueError("Email invalido.")
+        return v
+
+
+class SignosVitalesRequest(BaseModel):
+    paciente_rut: str
+    cita_id: Optional[int] = None
+    peso_kg: Optional[float] = None
+    talla_cm: Optional[float] = None
+    presion: str = ""
+    temperatura: Optional[float] = None
+    observaciones: str = Field(default="", max_length=1000)
+
+    @field_validator("paciente_rut")
+    @classmethod
+    def _rut(cls, v: str) -> str:
+        try:
+            return normalizar_rut(v)
+        except ValueError as exc:
+            raise ValueError(str(exc))
+
+
+class NotaClinicaRequest(BaseModel):
+    paciente_rut: str
+    cita_id: Optional[int] = None
+    diagnostico: str = Field(default="", max_length=1000)
+    notas: str = Field(default="", max_length=2000)
+
+    @field_validator("paciente_rut")
+    @classmethod
+    def _rut(cls, v: str) -> str:
+        try:
+            return normalizar_rut(v)
+        except ValueError as exc:
+            raise ValueError(str(exc))
+
+
 # ------------------------------------------------------- autenticación
 def get_usuario_actual(
     authorization: Optional[str] = Header(None, description="Bearer <token>"),
@@ -453,6 +530,22 @@ def agendar(datos: AgendarRequest, usuario: dict = Depends(get_usuario_actual)):
             ),
         )
         cita_id = cur.lastrowid
+        ahora = datetime.now(timezone.utc).isoformat()
+        conn.execute(
+            "INSERT OR IGNORE INTO fichas_clinicas"
+            " (paciente_rut, paciente_nombre, paciente_telefono, paciente_email,"
+            "  fecha_nacimiento, direccion, alergias, enfermedades_cronicas,"
+            "  medicamentos_habituales, fecha_creacion, fecha_actualizacion)"
+            " VALUES (?, ?, ?, ?, '', '', '', '', '', ?, ?)",
+            (
+                datos.paciente_rut,
+                datos.paciente_nombre,
+                datos.paciente_telefono,
+                datos.paciente_email,
+                ahora,
+                ahora,
+            ),
+        )
         conn.commit()
     except HTTPException:
         raise
@@ -784,6 +877,244 @@ def descargar_examen(examen_id: int, usuario: dict = Depends(get_usuario_actual)
         media_type="application/octet-stream",
         filename=fila["nombre_archivo"],
     )
+
+
+# ---------------------------------------------------------------- ficha clínica
+def _obtener_ficha(conn, rut: str):
+    return conn.execute(
+        "SELECT * FROM fichas_clinicas WHERE paciente_rut = ?", (rut,)
+    ).fetchone()
+
+
+@app.get("/api/ficha-clinica")
+def get_ficha_clinica(
+    rut: str = Query(..., description="RUT del paciente"),
+    usuario: dict = Depends(get_usuario_actual),
+):
+    try:
+        rut = normalizar_rut(rut)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    conn = get_connection()
+    try:
+        ficha = _obtener_ficha(conn, rut)
+        citas = conn.execute(
+            "SELECT c.id AS cita_id, c.paciente_nombre, c.paciente_telefono,"
+            "       b.fecha, b.hora_inicio, b.hora_fin, m.nombre AS medico,"
+            "       m.especialidad"
+            " FROM citas c"
+            " JOIN bloques_horarios b ON b.id = c.bloque_id"
+            " JOIN medicos m ON m.id = b.medico_id"
+            " WHERE c.paciente_rut = ?"
+            " ORDER BY b.fecha DESC, b.hora_inicio DESC",
+            (rut,),
+        ).fetchall()
+        notas = conn.execute(
+            "SELECT n.id, n.diagnostico, n.notas, n.fecha_creacion,"
+            "       m.nombre AS medico"
+            " FROM notas_clinicas n"
+            " JOIN fichas_clinicas f ON f.id = n.ficha_id"
+            " LEFT JOIN medicos m ON m.id = n.medico_id"
+            " WHERE f.paciente_rut = ?"
+            " ORDER BY n.fecha_creacion DESC",
+            (rut,),
+        ).fetchall()
+        signos = conn.execute(
+            "SELECT s.id, s.peso_kg, s.talla_cm, s.presion, s.temperatura,"
+            "       s.observaciones, s.fecha_creacion, m.nombre AS medico"
+            " FROM signos_vitales s"
+            " JOIN fichas_clinicas f ON f.id = s.ficha_id"
+            " LEFT JOIN medicos m ON m.id = s.medico_id"
+            " WHERE f.paciente_rut = ?"
+            " ORDER BY s.fecha_creacion DESC",
+            (rut,),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    return {
+        "ficha": dict(ficha) if ficha else None,
+        "citas": [dict(c) for c in citas],
+        "notas": [dict(n) for n in notas],
+        "signos": [dict(s) for s in signos],
+    }
+
+
+@app.put("/api/ficha-clinica")
+def guardar_ficha_clinica(
+    datos: FichaClinicaRequest, usuario: dict = Depends(get_usuario_actual)
+):
+    if not es_clinico(usuario):
+        raise HTTPException(
+            status_code=403, detail="Solo médicos pueden editar la ficha clínica."
+        )
+
+    conn = get_connection()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        ahora = datetime.now(timezone.utc).isoformat()
+        ficha = _obtener_ficha(conn, datos.paciente_rut)
+        if ficha:
+            conn.execute(
+                "UPDATE fichas_clinicas SET paciente_nombre = ?, paciente_telefono = ?,"
+                " paciente_email = ?, fecha_nacimiento = ?, direccion = ?, alergias = ?,"
+                " enfermedades_cronicas = ?, medicamentos_habituales = ?,"
+                " fecha_actualizacion = ? WHERE id = ?",
+                (
+                    datos.paciente_nombre,
+                    datos.paciente_telefono,
+                    datos.paciente_email,
+                    datos.fecha_nacimiento,
+                    datos.direccion,
+                    datos.alergias,
+                    datos.enfermedades_cronicas,
+                    datos.medicamentos_habituales,
+                    ahora,
+                    ficha["id"],
+                ),
+            )
+            ficha_id = ficha["id"]
+        else:
+            cur = conn.execute(
+                "INSERT INTO fichas_clinicas"
+                " (paciente_rut, paciente_nombre, paciente_telefono, paciente_email,"
+                "  fecha_nacimiento, direccion, alergias, enfermedades_cronicas,"
+                "  medicamentos_habituales, fecha_creacion, fecha_actualizacion)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    datos.paciente_rut,
+                    datos.paciente_nombre,
+                    datos.paciente_telefono,
+                    datos.paciente_email,
+                    datos.fecha_nacimiento,
+                    datos.direccion,
+                    datos.alergias,
+                    datos.enfermedades_cronicas,
+                    datos.medicamentos_habituales,
+                    ahora,
+                    ahora,
+                ),
+            )
+            ficha_id = cur.lastrowid
+        conn.commit()
+    except HTTPException:
+        raise
+    except sqlite3.Error as exc:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error de base de datos: {exc}")
+    finally:
+        conn.close()
+
+    return {"mensaje": "Ficha clínica guardada.", "ficha_id": ficha_id}
+
+
+@app.post("/api/ficha-clinica/signos", status_code=201)
+def agregar_signos_vitales(
+    datos: SignosVitalesRequest, usuario: dict = Depends(get_usuario_actual)
+):
+    if not es_clinico(usuario):
+        raise HTTPException(
+            status_code=403, detail="Solo médicos pueden registrar signos vitales."
+        )
+
+    conn = get_connection()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        ficha = _obtener_ficha(conn, datos.paciente_rut)
+        if not ficha:
+            conn.rollback()
+            raise HTTPException(
+                status_code=404,
+                detail="Paciente sin ficha clínica. Guárdala antes de agregar signos.",
+            )
+        if datos.cita_id:
+            cita = conn.execute(
+                "SELECT id FROM citas WHERE id = ?", (datos.cita_id,)
+            ).fetchone()
+            if not cita:
+                conn.rollback()
+                raise HTTPException(status_code=404, detail="Cita no encontrada.")
+        cur = conn.execute(
+            "INSERT INTO signos_vitales"
+            " (ficha_id, cita_id, medico_id, peso_kg, talla_cm, presion,"
+            "  temperatura, observaciones, fecha_creacion)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                ficha["id"],
+                datos.cita_id,
+                usuario["medico_id"],
+                datos.peso_kg,
+                datos.talla_cm,
+                datos.presion.strip(),
+                datos.temperatura,
+                datos.observaciones.strip(),
+                datetime.now(timezone.utc).isoformat(),
+            ),
+        )
+        signo_id = cur.lastrowid
+        conn.commit()
+    except HTTPException:
+        raise
+    except sqlite3.Error as exc:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error de base de datos: {exc}")
+    finally:
+        conn.close()
+
+    return {"mensaje": "Signos vitales registrados.", "signo_id": signo_id}
+
+
+@app.post("/api/ficha-clinica/notas", status_code=201)
+def agregar_nota_clinica(
+    datos: NotaClinicaRequest, usuario: dict = Depends(get_usuario_actual)
+):
+    if not es_clinico(usuario):
+        raise HTTPException(
+            status_code=403, detail="Solo médicos pueden agregar notas clínicas."
+        )
+
+    conn = get_connection()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        ficha = _obtener_ficha(conn, datos.paciente_rut)
+        if not ficha:
+            conn.rollback()
+            raise HTTPException(
+                status_code=404,
+                detail="Paciente sin ficha clínica. Guárdala antes de agregar notas.",
+            )
+        if datos.cita_id:
+            cita = conn.execute(
+                "SELECT id FROM citas WHERE id = ?", (datos.cita_id,)
+            ).fetchone()
+            if not cita:
+                conn.rollback()
+                raise HTTPException(status_code=404, detail="Cita no encontrada.")
+        cur = conn.execute(
+            "INSERT INTO notas_clinicas"
+            " (ficha_id, cita_id, medico_id, diagnostico, notas, fecha_creacion)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                ficha["id"],
+                datos.cita_id,
+                usuario["medico_id"],
+                datos.diagnostico.strip(),
+                datos.notas.strip(),
+                datetime.now(timezone.utc).isoformat(),
+            ),
+        )
+        nota_id = cur.lastrowid
+        conn.commit()
+    except HTTPException:
+        raise
+    except sqlite3.Error as exc:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error de base de datos: {exc}")
+    finally:
+        conn.close()
+
+    return {"mensaje": "Nota clínica agregada.", "nota_id": nota_id}
 
 
 if __name__ == "__main__":

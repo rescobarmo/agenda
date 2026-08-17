@@ -131,6 +131,9 @@ tailwind.config = {
         <button id="tabBtnExpediente" class="rounded-full px-4 py-2 text-teal-800/60 transition-colors hover:text-teal-900" role="tab" aria-selected="false" aria-controls="tabExpediente" hidden>
           Expediente
         </button>
+        <button id="tabBtnFicha" class="rounded-full px-4 py-2 text-teal-800/60 transition-colors hover:text-teal-900" role="tab" aria-selected="false" aria-controls="tabFicha" hidden>
+          Ficha clínica
+        </button>
       </nav>
     </header>
 
@@ -326,6 +329,141 @@ tailwind.config = {
         <section class="rounded-2xl border border-teal-100 bg-white p-5 shadow-sm">
           <h3 class="font-bold text-teal-900">Exámenes subidos</h3>
           <div id="expExamenesLista" class="mt-3"></div>
+        </section>
+      </div>
+
+    </main>
+
+    <main id="tabFicha" class="hidden" role="tabpanel" aria-labelledby="tabBtnFicha">
+
+      <section class="rounded-2xl border border-teal-100 bg-white p-5 shadow-sm">
+        <label for="fichaRut" class="mb-2 block text-xs font-semibold uppercase tracking-wide text-teal-800/60">
+          RUT del paciente
+        </label>
+        <div class="flex gap-2">
+          <input id="fichaRut" type="text" inputmode="numeric" autocomplete="off" placeholder="Ej. 12.345.678-9"
+                 class="w-full rounded-xl border border-teal-200 bg-white px-4 py-3 text-[15px] transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+          <button id="fichaBuscar" type="button"
+                  class="inline-flex shrink-0 items-center gap-2 rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
+            <span>Buscar</span>
+          </button>
+        </div>
+        <p id="fichaError" class="mt-2 hidden text-sm text-red-600"></p>
+      </section>
+
+      <div id="fichaContenido" class="mt-4 hidden">
+        <section class="rounded-2xl border border-teal-100 bg-white p-5 shadow-sm">
+          <div class="flex items-center gap-3">
+            <div class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-teal-100 text-teal-800">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0 0a8.949 8.949 0 0 0 4.95-1.488A3.987 3.987 0 0 0 13 16h-2a3.987 3.987 0 0 0-3.95 3.512A8.949 8.949 0 0 0 12 21Zm3-11a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+            </div>
+            <div>
+              <div id="fichaPacienteNombre" class="font-bold text-teal-900">—</div>
+              <div id="fichaPacienteRut" class="text-sm text-teal-800/60">—</div>
+            </div>
+          </div>
+
+          <form id="formFicha" class="mt-5 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label for="fichaNombre" class="mb-1.5 block text-sm font-medium text-teal-900">Nombre completo</label>
+              <input id="fichaNombre" type="text" autocomplete="off" class="w-full rounded-xl border border-teal-200 bg-white px-4 py-2.5 text-[15px] transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+            </div>
+            <div>
+              <label for="fichaTelefono" class="mb-1.5 block text-sm font-medium text-teal-900">Teléfono</label>
+              <input id="fichaTelefono" type="tel" inputmode="numeric" autocomplete="off" class="w-full rounded-xl border border-teal-200 bg-white px-4 py-2.5 text-[15px] transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+            </div>
+            <div>
+              <label for="fichaEmail" class="mb-1.5 block text-sm font-medium text-teal-900">Correo</label>
+              <input id="fichaEmail" type="email" autocomplete="off" class="w-full rounded-xl border border-teal-200 bg-white px-4 py-2.5 text-[15px] transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+            </div>
+            <div>
+              <label for="fichaNacimiento" class="mb-1.5 block text-sm font-medium text-teal-900">Fecha de nacimiento</label>
+              <input id="fichaNacimiento" type="date" class="w-full rounded-xl border border-teal-200 bg-white px-4 py-2.5 text-[15px] transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+            </div>
+            <div class="sm:col-span-2">
+              <label for="fichaDireccion" class="mb-1.5 block text-sm font-medium text-teal-900">Dirección</label>
+              <input id="fichaDireccion" type="text" autocomplete="off" class="w-full rounded-xl border border-teal-200 bg-white px-4 py-2.5 text-[15px] transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+            </div>
+            <div>
+              <label for="fichaAlergias" class="mb-1.5 block text-sm font-medium text-teal-900">Alergias</label>
+              <textarea id="fichaAlergias" rows="3" class="w-full rounded-xl border border-teal-200 bg-white px-4 py-2.5 text-[15px] transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600"></textarea>
+            </div>
+            <div>
+              <label for="fichaCronicas" class="mb-1.5 block text-sm font-medium text-teal-900">Enfermedades crónicas</label>
+              <textarea id="fichaCronicas" rows="3" class="w-full rounded-xl border border-teal-200 bg-white px-4 py-2.5 text-[15px] transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600"></textarea>
+            </div>
+            <div class="sm:col-span-2">
+              <label for="fichaMedicamentos" class="mb-1.5 block text-sm font-medium text-teal-900">Medicamentos habituales</label>
+              <textarea id="fichaMedicamentos" rows="3" class="w-full rounded-xl border border-teal-200 bg-white px-4 py-2.5 text-[15px] transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600"></textarea>
+            </div>
+            <div class="sm:col-span-2">
+              <button id="fichaGuardar" type="submit"
+                      class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 3.75V16.5L12 14.25 7.5 16.5V3.75m9 0H18A2.25 2.25 0 0 1 20.25 6v12A2.25 2.25 0 0 1 18 20.25H6A2.25 2.25 0 0 1 3.75 18V6A2.25 2.25 0 0 1 6 3.75h1.5m9 0h-9"/></svg>
+                <span>Guardar ficha clínica</span>
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <div class="mt-4 grid gap-4 lg:grid-cols-2">
+          <section class="rounded-2xl border border-teal-100 bg-white p-5 shadow-sm">
+            <h3 class="font-bold text-teal-900">Signos vitales</h3>
+            <form id="formSignos" class="mt-4 grid grid-cols-2 gap-3">
+              <div>
+                <label for="signoPeso" class="mb-1 block text-xs font-medium text-teal-900">Peso (kg)</label>
+                <input id="signoPeso" type="number" step="0.1" min="0" inputmode="decimal" placeholder="Ej. 70.5" class="w-full rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+              </div>
+              <div>
+                <label for="signoTalla" class="mb-1 block text-xs font-medium text-teal-900">Talla (cm)</label>
+                <input id="signoTalla" type="number" step="0.1" min="0" inputmode="decimal" placeholder="Ej. 170" class="w-full rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+              </div>
+              <div>
+                <label for="signoPresion" class="mb-1 block text-xs font-medium text-teal-900">Presión arterial</label>
+                <input id="signoPresion" type="text" inputmode="numeric" placeholder="120/80" class="w-full rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+              </div>
+              <div>
+                <label for="signoTemperatura" class="mb-1 block text-xs font-medium text-teal-900">Temperatura (°C)</label>
+                <input id="signoTemperatura" type="number" step="0.1" inputmode="decimal" placeholder="Ej. 36.5" class="w-full rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+              </div>
+              <div class="col-span-2">
+                <label for="signoObs" class="mb-1 block text-xs font-medium text-teal-900">Observaciones</label>
+                <textarea id="signoObs" rows="2" placeholder="Estado general, motivo, etc." class="w-full rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600"></textarea>
+              </div>
+              <div class="col-span-2">
+                <button id="signoGuardar" type="submit"
+                        class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70">
+                  <span>Registrar signos</span>
+                </button>
+              </div>
+            </form>
+            <div id="fichaSignosLista" class="mt-4"></div>
+          </section>
+
+          <section class="rounded-2xl border border-teal-100 bg-white p-5 shadow-sm">
+            <h3 class="font-bold text-teal-900">Notas clínicas</h3>
+            <form id="formNotas" class="mt-4 space-y-3">
+              <div>
+                <label for="notaDiagnostico" class="mb-1 block text-xs font-medium text-teal-900">Diagnóstico</label>
+                <input id="notaDiagnostico" type="text" placeholder="Ej. Gripe común" class="w-full rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+              </div>
+              <div>
+                <label for="notaTexto" class="mb-1 block text-xs font-medium text-teal-900">Notas</label>
+                <textarea id="notaTexto" rows="3" placeholder="Observaciones, tratamiento, evolución…" class="w-full rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600"></textarea>
+              </div>
+              <button id="notaGuardar" type="submit"
+                      class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70">
+                <span>Agregar nota</span>
+              </button>
+            </form>
+            <div id="fichaNotasLista" class="mt-4"></div>
+          </section>
+        </div>
+
+        <section class="mt-4 rounded-2xl border border-teal-100 bg-white p-5 shadow-sm">
+          <h3 class="font-bold text-teal-900">Historial de citas</h3>
+          <div id="fichaCitasLista" class="mt-3"></div>
         </section>
       </div>
 
@@ -910,8 +1048,8 @@ tailwind.config = {
   }
 
   function cambiarTab(tab) {
-    var paneles = { agendar: 'tabAgendar', citas: 'tabMisCitas', calendario: 'tabCalendario', expediente: 'tabExpediente' };
-    var botones = { agendar: 'tabBtnAgendar', citas: 'tabBtnCitas', calendario: 'tabBtnCalendario', expediente: 'tabBtnExpediente' };
+    var paneles = { agendar: 'tabAgendar', citas: 'tabMisCitas', calendario: 'tabCalendario', expediente: 'tabExpediente', ficha: 'tabFicha' };
+    var botones = { agendar: 'tabBtnAgendar', citas: 'tabBtnCitas', calendario: 'tabBtnCalendario', expediente: 'tabBtnExpediente', ficha: 'tabBtnFicha' };
     Object.keys(paneles).forEach(function (t) {
       var activo = t === tab;
       $(paneles[t]).classList.toggle('hidden', !activo);
@@ -925,7 +1063,9 @@ tailwind.config = {
     var u = getUsuario();
     var visible = u && (u.rol === 'medico' || u.rol === 'admin');
     $('tabBtnExpediente').hidden = !visible;
+    $('tabBtnFicha').hidden = !visible;
     if (!visible && !$('tabExpediente').classList.contains('hidden')) cambiarTab('agendar');
+    if (!visible && !$('tabFicha').classList.contains('hidden')) cambiarTab('agendar');
   }
 
   function mostrarBuscarError(msg) {
@@ -1444,6 +1584,55 @@ tailwind.config = {
     });
   }
 
+  var fichaPaciente = null;
+
+  function mostrarFichaError(msg) {
+    var e = $('fichaError');
+    e.textContent = msg;
+    e.classList.remove('hidden');
+  }
+
+  function buscarFicha() {
+    var rut = $('fichaRut').value.trim();
+    $('fichaError').classList.add('hidden');
+    if (!validarRut(rut)) {
+      mostrarFichaError('Ingresa un RUT válido, Ej. 12.345.678-9.');
+      return;
+    }
+    rut = normalizarRut(rut);
+    var btn = $('fichaBuscar');
+    btn.disabled = true;
+    var original = btn.innerHTML;
+    btn.innerHTML = spinnerSvg('') + '<span>Buscando…</span>';
+    api('/api/ficha-clinica?rut=' + encodeURIComponent(rut)).then(function (data) {
+      var citas = data.citas || [];
+      var nombre = (data.ficha && data.ficha.paciente_nombre) || (citas.length ? citas[0].paciente_nombre : '');
+      fichaPaciente = { rut: rut, nombre: nombre };
+      $('fichaPacienteNombre').textContent = nombre || 'Paciente sin citas registradas';
+      $('fichaPacienteRut').textContent = rut;
+      $('fichaContenido').classList.remove('hidden');
+      var f = data.ficha || {};
+      $('fichaNombre').value = f.paciente_nombre || nombre || '';
+      $('fichaTelefono').value = f.paciente_telefono || '';
+      $('fichaEmail').value = f.paciente_email || '';
+      $('fichaNacimiento').value = f.fecha_nacimiento || '';
+      $('fichaDireccion').value = f.direccion || '';
+      $('fichaAlergias').value = f.alergias || '';
+      $('fichaCronicas').value = f.enfermedades_cronicas || '';
+      $('fichaMedicamentos').value = f.medicamentos_habituales || '';
+      $('formSignos').reset();
+      $('formNotas').reset();
+      renderSignos(data.signos || []);
+      renderNotas(data.notas || []);
+      renderFichaCitas(citas);
+    }).catch(function (err) {
+      toast(err.message, 'error');
+    }).finally(function () {
+      btn.disabled = false;
+      btn.innerHTML = original;
+    });
+  }
+
   function fechaLegible(isoStr) {
     if (!isoStr) return '';
     var d = new Date(isoStr);
@@ -1464,6 +1653,166 @@ tailwind.config = {
 
   function escapeAttr(s) {
     return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function renderSignos(lista) {
+    var cont = $('fichaSignosLista');
+    if (!lista.length) {
+      cont.innerHTML = '<p class="rounded-xl border border-dashed border-teal-200 p-4 text-center text-sm text-teal-800/50">Sin registros de signos vitales.</p>';
+      return;
+    }
+    cont.innerHTML = lista.map(function (s) {
+      var chips = [];
+      if (s.peso_kg != null) chips.push('Peso: ' + s.peso_kg + ' kg');
+      if (s.talla_cm != null) chips.push('Talla: ' + s.talla_cm + ' cm');
+      if (s.presion) chips.push('PA: ' + s.presion);
+      if (s.temperatura != null) chips.push('T°: ' + s.temperatura + ' °C');
+      return '<article class="fade-in mb-2 rounded-xl border border-teal-100 bg-white p-4">' +
+        '<div class="flex items-start justify-between gap-2">' +
+          '<div class="min-w-0">' +
+            '<div class="flex flex-wrap gap-2 text-sm font-semibold text-teal-900">' +
+              chips.map(function (d) { return '<span class="rounded-lg bg-teal-50 px-2 py-0.5">' + d + '</span>'; }).join('') +
+            '</div>' +
+            (s.observaciones ? '<p class="mt-1.5 text-sm text-teal-800/70">' + escapeHtml(s.observaciones) + '</p>' : '') +
+            (s.medico ? '<p class="mt-1.5 text-xs text-teal-800/50">' + escapeHtml(s.medico) + '</p>' : '') +
+          '</div>' +
+          '<span class="shrink-0 text-xs text-teal-800/50">' + fechaLegible(s.fecha_creacion) + '</span>' +
+        '</div>' +
+      '</article>';
+    }).join('');
+  }
+
+  function renderNotas(lista) {
+    var cont = $('fichaNotasLista');
+    if (!lista.length) {
+      cont.innerHTML = '<p class="rounded-xl border border-dashed border-teal-200 p-4 text-center text-sm text-teal-800/50">Sin notas clínicas.</p>';
+      return;
+    }
+    cont.innerHTML = lista.map(function (n) {
+      return '<article class="fade-in mb-2 rounded-xl border border-teal-100 bg-white p-4">' +
+        '<div class="flex items-center justify-between gap-2">' +
+          '<span class="text-xs font-semibold uppercase tracking-wide text-teal-800/50">Nota clínica</span>' +
+          '<span class="text-xs text-teal-800/50">' + fechaLegible(n.fecha_creacion) + '</span>' +
+        '</div>' +
+        (n.diagnostico ? '<p class="mt-1.5 font-semibold text-teal-900">' + escapeHtml(n.diagnostico) + '</p>' : '') +
+        (n.notas ? '<p class="mt-1 text-sm text-teal-800/70">' + escapeHtml(n.notas) + '</p>' : '') +
+        (n.medico ? '<p class="mt-1.5 text-xs text-teal-800/50">' + escapeHtml(n.medico) + '</p>' : '') +
+      '</article>';
+    }).join('');
+  }
+
+  function renderFichaCitas(lista) {
+    var cont = $('fichaCitasLista');
+    if (!lista.length) {
+      cont.innerHTML = '<p class="rounded-xl border border-dashed border-teal-200 p-4 text-center text-sm text-teal-800/50">Sin citas registradas.</p>';
+      return;
+    }
+    cont.innerHTML = lista.map(function (c) {
+      return '<article class="fade-in mb-2 flex items-center justify-between gap-3 rounded-xl border border-teal-100 bg-white p-4">' +
+        '<div class="min-w-0">' +
+          '<div class="font-semibold text-teal-900">' + descFecha(c.fecha) + ' · ' + c.hora_inicio + ' a ' + c.hora_fin + '</div>' +
+          '<div class="text-sm text-teal-800/60">' + escapeHtml(c.medico) + (c.especialidad ? ' · ' + escapeHtml(c.especialidad) : '') + '</div>' +
+        '</div>' +
+      '</article>';
+    }).join('');
+  }
+
+  function guardarFicha(ev) {
+    ev.preventDefault();
+    if (!fichaPaciente) return;
+    var btn = $('fichaGuardar');
+    btn.disabled = true;
+    var original = btn.innerHTML;
+    btn.innerHTML = spinnerSvg('') + '<span>Guardando…</span>';
+    api('/api/ficha-clinica', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        paciente_rut: fichaPaciente.rut,
+        paciente_nombre: $('fichaNombre').value.trim(),
+        paciente_telefono: $('fichaTelefono').value.trim(),
+        paciente_email: $('fichaEmail').value.trim(),
+        fecha_nacimiento: $('fichaNacimiento').value,
+        direccion: $('fichaDireccion').value.trim(),
+        alergias: $('fichaAlergias').value.trim(),
+        enfermedades_cronicas: $('fichaCronicas').value.trim(),
+        medicamentos_habituales: $('fichaMedicamentos').value.trim(),
+      }),
+    }).then(function () {
+      toast('Ficha clínica guardada.', 'success');
+      fichaPaciente.nombre = $('fichaNombre').value.trim();
+      $('fichaPacienteNombre').textContent = fichaPaciente.nombre;
+    }).catch(function (err) {
+      toast(err.message, 'error');
+    }).finally(function () {
+      btn.disabled = false;
+      btn.innerHTML = original;
+    });
+  }
+
+  function agregarSignos(ev) {
+    ev.preventDefault();
+    if (!fichaPaciente) return;
+    var btn = $('signoGuardar');
+    btn.disabled = true;
+    var original = btn.innerHTML;
+    btn.innerHTML = spinnerSvg('') + '<span>Guardando…</span>';
+    api('/api/ficha-clinica/signos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        paciente_rut: fichaPaciente.rut,
+        peso_kg: $('signoPeso').value === '' ? null : Number($('signoPeso').value),
+        talla_cm: $('signoTalla').value === '' ? null : Number($('signoTalla').value),
+        presion: $('signoPresion').value.trim(),
+        temperatura: $('signoTemperatura').value === '' ? null : Number($('signoTemperatura').value),
+        observaciones: $('signoObs').value.trim(),
+      }),
+    }).then(function () {
+      $('formSignos').reset();
+      toast('Signos vitales registrados.', 'success');
+      refrescarFicha();
+    }).catch(function (err) {
+      toast(err.message, 'error');
+    }).finally(function () {
+      btn.disabled = false;
+      btn.innerHTML = original;
+    });
+  }
+
+  function agregarNota(ev) {
+    ev.preventDefault();
+    if (!fichaPaciente) return;
+    var btn = $('notaGuardar');
+    btn.disabled = true;
+    var original = btn.innerHTML;
+    btn.innerHTML = spinnerSvg('') + '<span>Guardando…</span>';
+    api('/api/ficha-clinica/notas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        paciente_rut: fichaPaciente.rut,
+        diagnostico: $('notaDiagnostico').value.trim(),
+        notas: $('notaTexto').value.trim(),
+      }),
+    }).then(function () {
+      $('formNotas').reset();
+      toast('Nota clínica agregada.', 'success');
+      refrescarFicha();
+    }).catch(function (err) {
+      toast(err.message, 'error');
+    }).finally(function () {
+      btn.disabled = false;
+      btn.innerHTML = original;
+    });
+  }
+
+  function refrescarFicha() {
+    if (!fichaPaciente) return;
+    api('/api/ficha-clinica?rut=' + encodeURIComponent(fichaPaciente.rut)).then(function (data) {
+      renderSignos(data.signos || []);
+      renderNotas(data.notas || []);
+    }).catch(function () {});
   }
 
   dateStrip.addEventListener('click', function (e) {
@@ -1501,6 +1850,7 @@ tailwind.config = {
   $('tabBtnCitas').addEventListener('click', function () { cambiarTab('citas'); });
   $('tabBtnCalendario').addEventListener('click', function () { cambiarTab('calendario'); });
   $('tabBtnExpediente').addEventListener('click', function () { cambiarTab('expediente'); });
+  $('tabBtnFicha').addEventListener('click', function () { cambiarTab('ficha'); });
 
   $('expBuscar').addEventListener('click', buscarExpediente);
   $('expRut').addEventListener('keydown', function (e) { if (e.key === 'Enter') buscarExpediente(); });
@@ -1510,6 +1860,12 @@ tailwind.config = {
     var btn = e.target.closest('[data-descargar]');
     if (btn) descargarExamen(btn.dataset.descargar, btn.dataset.nombre);
   });
+
+  $('fichaBuscar').addEventListener('click', buscarFicha);
+  $('fichaRut').addEventListener('keydown', function (e) { if (e.key === 'Enter') buscarFicha(); });
+  $('formFicha').addEventListener('submit', guardarFicha);
+  $('formSignos').addEventListener('submit', agregarSignos);
+  $('formNotas').addEventListener('submit', agregarNota);
 
   $('calPrev').addEventListener('click', function () { cambiarSemana(-7); });
   $('calNext').addEventListener('click', function () { cambiarSemana(7); });
