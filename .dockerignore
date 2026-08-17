@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+agenda.db
+agenda.db-shm
+agenda.db-wal
+.env
+start.bat
