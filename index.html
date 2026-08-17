@@ -372,10 +372,12 @@ tailwind.config = {
             <div>
               <label for="fichaTelefono" class="mb-1.5 block text-sm font-medium text-teal-900">Teléfono</label>
               <input id="fichaTelefono" type="tel" inputmode="numeric" autocomplete="off" class="w-full rounded-xl border border-teal-200 bg-white px-4 py-2.5 text-[15px] transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+              <p id="errFichaTelefono" class="mt-1 hidden text-sm text-red-600"></p>
             </div>
             <div>
               <label for="fichaEmail" class="mb-1.5 block text-sm font-medium text-teal-900">Correo</label>
               <input id="fichaEmail" type="email" autocomplete="off" class="w-full rounded-xl border border-teal-200 bg-white px-4 py-2.5 text-[15px] transition placeholder:text-teal-800/30 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+              <p id="errFichaEmail" class="mt-1 hidden text-sm text-red-600"></p>
             </div>
             <div>
               <label for="fichaNacimiento" class="mb-1.5 block text-sm font-medium text-teal-900">Fecha de nacimiento</label>
@@ -689,7 +691,11 @@ tailwind.config = {
         }
         if (!res.ok) {
           var detalle = data && data.detail ? data.detail : 'Error ' + res.status;
-          if (typeof detalle === 'object') detalle = detalle.msg || JSON.stringify(detalle);
+          if (Array.isArray(detalle)) {
+            detalle = detalle.length && detalle[0].msg ? detalle[0].msg : JSON.stringify(detalle);
+          } else if (typeof detalle === 'object') {
+            detalle = detalle.msg || JSON.stringify(detalle);
+          }
           throw new Error(detalle);
         }
         return data;
@@ -1720,6 +1726,29 @@ tailwind.config = {
   function guardarFicha(ev) {
     ev.preventDefault();
     if (!fichaPaciente) return;
+    var ok = true;
+    var nombre = $('fichaNombre').value.trim();
+    var tel = $('fichaTelefono').value.trim();
+    var email = $('fichaEmail').value.trim();
+    var eTel = $('errFichaTelefono');
+    var eMail = $('errFichaEmail');
+    eTel.classList.add('hidden');
+    eMail.classList.add('hidden');
+    if (nombre.length < 2) {
+      toast('Ingresa el nombre completo.', 'error');
+      ok = false;
+    }
+    if (tel && !validarTelefono(tel)) {
+      eTel.textContent = 'Teléfono inválido (7 a 15 dígitos).';
+      eTel.classList.remove('hidden');
+      ok = false;
+    }
+    if (!validarEmail(email)) {
+      eMail.textContent = 'Correo inválido o déjalo vacío.';
+      eMail.classList.remove('hidden');
+      ok = false;
+    }
+    if (!ok) return;
     var btn = $('fichaGuardar');
     btn.disabled = true;
     var original = btn.innerHTML;
@@ -1729,9 +1758,9 @@ tailwind.config = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         paciente_rut: fichaPaciente.rut,
-        paciente_nombre: $('fichaNombre').value.trim(),
-        paciente_telefono: $('fichaTelefono').value.trim(),
-        paciente_email: $('fichaEmail').value.trim(),
+        paciente_nombre: nombre,
+        paciente_telefono: tel,
+        paciente_email: email,
         fecha_nacimiento: $('fichaNacimiento').value,
         direccion: $('fichaDireccion').value.trim(),
         alergias: $('fichaAlergias').value.trim(),
@@ -1740,8 +1769,8 @@ tailwind.config = {
       }),
     }).then(function () {
       toast('Ficha clínica guardada.', 'success');
-      fichaPaciente.nombre = $('fichaNombre').value.trim();
-      $('fichaPacienteNombre').textContent = fichaPaciente.nombre;
+      fichaPaciente.nombre = nombre;
+      $('fichaPacienteNombre').textContent = nombre;
     }).catch(function (err) {
       toast(err.message, 'error');
     }).finally(function () {
