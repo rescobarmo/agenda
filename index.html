@@ -118,17 +118,17 @@ tailwind.config = {
         </button>
       </div>
 
-      <nav class="flex w-full rounded-full bg-teal-100/80 p-1 text-sm font-medium sm:w-auto" role="tablist" aria-label="Secciones">
-        <button id="tabBtnAgendar" class="flex-1 rounded-full px-4 py-2 text-teal-900 shadow-sm sm:flex-none" role="tab" aria-selected="true" aria-controls="tabAgendar">
+      <nav class="flex w-full flex-wrap gap-1 rounded-2xl bg-teal-100/80 p-1 text-sm font-medium" role="tablist" aria-label="Secciones">
+        <button id="tabBtnAgendar" class="rounded-full px-4 py-2 text-teal-900 shadow-sm" role="tab" aria-selected="true" aria-controls="tabAgendar">
           Agendar cita
         </button>
-        <button id="tabBtnCitas" class="flex-1 rounded-full px-4 py-2 text-teal-800/60 transition-colors hover:text-teal-900 sm:flex-none" role="tab" aria-selected="false" aria-controls="tabMisCitas">
+        <button id="tabBtnCitas" class="rounded-full px-4 py-2 text-teal-800/60 transition-colors hover:text-teal-900" role="tab" aria-selected="false" aria-controls="tabMisCitas">
           Mis citas
         </button>
-        <button id="tabBtnCalendario" class="flex-1 rounded-full px-4 py-2 text-teal-800/60 transition-colors hover:text-teal-900 sm:flex-none" role="tab" aria-selected="false" aria-controls="tabCalendario">
+        <button id="tabBtnCalendario" class="rounded-full px-4 py-2 text-teal-800/60 transition-colors hover:text-teal-900" role="tab" aria-selected="false" aria-controls="tabCalendario">
           Calendario
         </button>
-        <button id="tabBtnExpediente" class="flex-1 rounded-full px-4 py-2 text-teal-800/60 transition-colors hover:text-teal-900 sm:flex-none" role="tab" aria-selected="false" aria-controls="tabExpediente" hidden>
+        <button id="tabBtnExpediente" class="rounded-full px-4 py-2 text-teal-800/60 transition-colors hover:text-teal-900" role="tab" aria-selected="false" aria-controls="tabExpediente" hidden>
           Expediente
         </button>
       </nav>
@@ -916,7 +916,7 @@ tailwind.config = {
       var activo = t === tab;
       $(paneles[t]).classList.toggle('hidden', !activo);
       $(botones[t]).setAttribute('aria-selected', String(activo));
-      $(botones[t]).className = 'flex-1 rounded-full px-4 py-2 sm:flex-none ' + (activo ? 'bg-white text-teal-900 shadow-sm' : 'text-teal-800/60 transition-colors hover:text-teal-900');
+      $(botones[t]).className = 'rounded-full px-4 py-2 ' + (activo ? 'bg-white text-teal-900 shadow-sm' : 'text-teal-800/60 transition-colors hover:text-teal-900');
     });
     if (tab === 'calendario') renderCalendario();
   }
